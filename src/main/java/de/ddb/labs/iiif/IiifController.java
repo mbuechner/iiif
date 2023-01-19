@@ -22,8 +22,7 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -40,8 +39,12 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -56,14 +59,20 @@ class IiifController {
     private final static String API_KEY = "?oauth_consumer_key=";
     private final OkHttpClient httpClient;
     private final TransformerFactory factory;
-    private final String XSLT_01;
-    private final String XSLT_02;
 
     @Value("${iiif.baseurl}")
     private String baseUrl;
 
     @Value("${iiif.ddb_api_key}")
     private String ddbApiKey;
+
+    @Value("classpath:transform-to-xml.xsl")
+    private Resource transformToXml;
+    private String transformatToXmlString;
+
+    @Value("classpath:transform-to-json.xsl")
+    private Resource transformatToJson;
+    private String transformToJsonString;
 
     public IiifController() throws URISyntaxException, IOException {
         final Dispatcher dispatcher = new Dispatcher();
@@ -76,8 +85,12 @@ class IiifController {
                 .build();
 
         factory = new net.sf.saxon.TransformerFactoryImpl();
-        XSLT_01 = Files.readString(Paths.get(IiifController.class.getClassLoader().getResource("transform-to-xml.xsl").toURI()));
-        XSLT_02 = Files.readString(Paths.get(IiifController.class.getClassLoader().getResource("transform-to-json.xsl").toURI()));
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void doSomethingAfterStartup() throws IOException {
+        transformatToXmlString = StreamUtils.copyToString(transformToXml.getInputStream(), StandardCharsets.UTF_8);
+        transformToJsonString = StreamUtils.copyToString(transformatToJson.getInputStream(), StandardCharsets.UTF_8);
     }
 
     @RequestMapping(
@@ -106,8 +119,8 @@ class IiifController {
 
         try (final Response response = httpClient.newCall(getRequest).execute()) {
             if (response.isSuccessful()) {
-                final StreamSource ss01 = new StreamSource(new StringReader(XSLT_01));
-                final StreamSource ss02 = new StreamSource(new StringReader(XSLT_02));
+                final StreamSource ss01 = new StreamSource(new StringReader(transformatToXmlString));
+                final StreamSource ss02 = new StreamSource(new StringReader(transformToJsonString));
 
                 final InputStream inputXmlString = response.body().byteStream();
 
