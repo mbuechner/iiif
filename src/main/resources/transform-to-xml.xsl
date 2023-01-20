@@ -239,7 +239,8 @@ limitations under the License.
                 </map>
             </array>
             <!-- logo -->
-            <!-- <array key="logo">
+            <!-- TODO: logo at this position is not IIIF Presentation v3 valid, but Mirador 3 will display a logo (which is nice) --> 
+            <array key="logo">
                 <map>
                     <string key="id">
                         <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
@@ -259,7 +260,7 @@ limitations under the License.
                         </map>
                     </array>
                 </map>
-            </array> -->
+            </array>
             <!-- seeAlso -->
             <array key="seeAlso">
                 <map>
