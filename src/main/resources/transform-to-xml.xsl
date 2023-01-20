@@ -239,7 +239,7 @@ limitations under the License.
                 </map>
             </array>
             <!-- logo -->
-            <array key="logo">
+            <!-- <array key="logo">
                 <map>
                     <string key="id">
                         <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
@@ -259,7 +259,7 @@ limitations under the License.
                         </map>
                     </array>
                 </map>
-            </array>
+            </array> -->
             <!-- seeAlso -->
             <array key="seeAlso">
                 <map>
@@ -293,29 +293,23 @@ limitations under the License.
                         <string key="type">Canvas</string>
                         <map key="label">
                             <array key="de">
-                                <string>
-                                    <xsl:value-of select="@name" />
-                                </string>
-                                <xsl:if test="@name2">
-                                    <string>
-                                        <xsl:value-of select="@name2" />
-                                    </string>
-                                </xsl:if>
-                                <xsl:if test="@name3">
-                                    <string>
-                                        <xsl:value-of select="@name3" />
-                                    </string>
-                                </xsl:if>
-                                <xsl:if test="@name4">
-                                    <string>
-                                        <xsl:value-of select="@name4" />
-                                    </string>
-                                </xsl:if>
-                                <xsl:if test="@name5">
-                                    <string>
-                                        <xsl:value-of select="@name5" />
-                                    </string>
-                                </xsl:if>
+                                <xsl:choose>
+                                    <xsl:when test="@name3">
+                                        <string>
+                                            <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                                        </string>
+                                    </xsl:when>
+                                    <xsl:when test="@name2">
+                                        <string>
+                                            <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                                        </string>
+                                    </xsl:when>
+                                    <xsl:when test="@name">
+                                        <string>
+                                            <xsl:value-of select="@name" />
+                                        </string>
+                                    </xsl:when>
+                                </xsl:choose>
                             </array>
                         </map>
                         <number key="height">800</number>
@@ -330,77 +324,80 @@ limitations under the License.
                                 </string>
                                 <string key="type">AnnotationPage</string>
                                 <array key="items">
-                                    <map>
-                                        <string key="id">
-                                            <xsl:value-of select="$uri" />
-                                            <xsl:text>/annotation/p0001-image</xsl:text>
-                                        </string>
-                                        <string key="type">Annotation</string>
-                                        <string key="motivation">painting</string>
-                                        <map key="body">
+                                    <!-- images -->
+                                    <xsl:if test="@mimetype = 'image/jpeg'">
+                                        <map>
                                             <string key="id">
-                                                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                                <xsl:value-of select="@ref" />
-                                                <xsl:text>/full/full/0/default.jpg</xsl:text>
+                                                <xsl:value-of select="$uri" />
+                                                <xsl:text>/annotation/p0001-image</xsl:text>
                                             </string>
-                                            <string key="type">Image</string>
-                                            <string key="format">image/jpeg</string>
-                                            <array key="service">
-                                                <map>
-                                                    <string key="id">
-                                                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                                        <xsl:value-of select="@ref" />
-                                                    </string>
-                                                    <string key="type">ImageService2</string>
-                                                    <string key="profile">level2</string>
-                                                </map>
-                                            </array>
-                                            <number key="height">800</number>
-                                            <number key="width">600</number>
-                                            <array key="metadata">
-                                                <map>
-                                                    <map key="label">
-                                                        <array key="de">
-                                                            <string>Beschreibung</string>
-                                                        </array>
+                                            <string key="type">Annotation</string>
+                                            <string key="motivation">painting</string>
+                                            <map key="body">
+                                                <string key="id">
+                                                    <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                                    <xsl:value-of select="@ref" />
+                                                    <xsl:text>/full/full/0/default.jpg</xsl:text>
+                                                </string>
+                                                <string key="type">Image</string>
+                                                <string key="format">image/jpeg</string>
+                                                <array key="service">
+                                                    <map>
+                                                        <string key="id">
+                                                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                                            <xsl:value-of select="@ref" />
+                                                        </string>
+                                                        <string key="type">ImageService2</string>
+                                                        <string key="profile">level2</string>
                                                     </map>
-                                                    <map key="value">
-                                                        <array key="de">
-                                                            <string>
-                                                                <xsl:value-of select="@name" />
-                                                            </string>
-                                                            <xsl:if test="@name2">
+                                                </array>
+                                                <number key="height">800</number>
+                                                <number key="width">600</number>
+                                                <array key="metadata">
+                                                    <map>
+                                                        <map key="label">
+                                                            <array key="de">
+                                                                <string>Beschreibung</string>
+                                                            </array>
+                                                        </map>
+                                                        <map key="value">
+                                                            <array key="de">
                                                                 <string>
-                                                                    <xsl:value-of select="@name2" />
+                                                                    <xsl:value-of select="@name" />
                                                                 </string>
-                                                            </xsl:if>
-                                                            <xsl:if test="@name3">
-                                                                <string>
-                                                                    <xsl:value-of select="@name3" />
-                                                                </string>
-                                                            </xsl:if>
-                                                            <xsl:if test="@name4">
-                                                                <string>
-                                                                    <xsl:value-of select="@name4" />
-                                                                </string>
-                                                            </xsl:if>
-                                                            <xsl:if test="@name5">
-                                                                <string>
-                                                                    <xsl:value-of select="@name5" />
-                                                                </string>
-                                                            </xsl:if>
-                                                        </array>
+                                                                <xsl:if test="@name2">
+                                                                    <string>
+                                                                        <xsl:value-of select="@name2" />
+                                                                    </string>
+                                                                </xsl:if>
+                                                                <xsl:if test="@name3">
+                                                                    <string>
+                                                                        <xsl:value-of select="@name3" />
+                                                                    </string>
+                                                                </xsl:if>
+                                                                <xsl:if test="@name4">
+                                                                    <string>
+                                                                        <xsl:value-of select="@name4" />
+                                                                    </string>
+                                                                </xsl:if>
+                                                                <xsl:if test="@name5">
+                                                                    <string>
+                                                                        <xsl:value-of select="@name5" />
+                                                                    </string>
+                                                                </xsl:if>
+                                                            </array>
+                                                        </map>
                                                     </map>
-                                                </map>
-                                            </array>
+                                                </array>
+                                            </map>
+                                            <string key="target">
+                                                <xsl:value-of select="$uri" />
+                                                <xsl:text>/canvas/p</xsl:text>
+                                                <xsl:value-of select="position()" />
+                                                <xsl:text>/1</xsl:text>
+                                            </string>
                                         </map>
-                                        <string key="target">
-                                            <xsl:value-of select="$uri" />
-                                            <xsl:text>/canvas/p</xsl:text>
-                                            <xsl:value-of select="position()" />
-                                            <xsl:text>/1</xsl:text>
-                                        </string>
-                                    </map>
+                                    </xsl:if>
                                 </array>
                             </map>
                         </array>
@@ -462,9 +459,9 @@ limitations under the License.
                                 <array key="items">
                                     <map>
                                         <string key="id">
-                                            <xsl:value-of select="$uri"/>
+                                            <xsl:value-of select="$uri" />
                                             <xsl:text>/canvas/p</xsl:text>
-                                            <xsl:value-of select="position()"/>
+                                            <xsl:value-of select="position()" />
                                         </string>
                                         <string key="type">Canvas</string>
                                     </map>
