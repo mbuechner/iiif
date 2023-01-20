@@ -134,7 +134,7 @@ limitations under the License.
             </array>
             <!-- rights of metadata -->
             <string key="rights">
-                <xsl:value-of select="/cortex:cortex/cortex:view/ns4:item/ns4:metadata-rights" />
+                <xsl:value-of select="/cortex:cortex/cortex:view/ns4:item/ns4:license/@ns3:resource" />
             </string>
             <!-- requiredStatement -->
             <map key="requiredStatement">
