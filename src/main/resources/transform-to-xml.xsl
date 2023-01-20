@@ -17,7 +17,7 @@ limitations under the License.
 <xsl:stylesheet exclude-result-prefixes="cortex ns3 ns4" version="3.0" xmlns="http://www.w3.org/2005/xpath-functions" xmlns:cortex="http://www.deutsche-digitale-bibliothek.de/cortex" xmlns:ns3="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:ns4="http://www.deutsche-digitale-bibliothek.de/item" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:output encoding="UTF-8" method="xml" />
     <!-- uri of this record -->
-    <xsl:param name="uri" />
+    <xsl:param name="uri">https://labs.deutsche-digitale-bibliothek.de/iiif/presentation/3/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345</xsl:param>
     <!-- root template -->
     <xsl:template match="/">
         <!-- variables -->
@@ -88,10 +88,10 @@ limitations under the License.
                 </xsl:for-each>
             </array>
             <!-- summary block -->
-            <xsl:if test="/cortex:cortex/cortex:view/ns4:item/ns4:fields[@usage = 'display']/ns4:field[@id = 'flex_mus_neu_050']">
+            <xsl:if test="/cortex:cortex/cortex:view/ns4:item/ns4:fields[@usage = 'display']/ns4:field[@id = 'flex_mus_neu_050' or @id = 'flex_film_007']">
                 <map key="summary">
                     <array key="de">
-                        <xsl:for-each select="/cortex:cortex/cortex:view/ns4:item/ns4:fields[@usage = 'display']/ns4:field[@id = 'flex_mus_neu_050']/ns4:value">
+                        <xsl:for-each select="/cortex:cortex/cortex:view/ns4:item/ns4:fields[@usage = 'display']/ns4:field[@id = 'flex_mus_neu_050' or @id = 'flex_film_007']/ns4:value">
                             <string>
                                 <xsl:value-of select="." />
                             </string>
@@ -272,6 +272,40 @@ limitations under the License.
                     <string key="profile">https://www.deutsche-digitale-bibliothek.de/ns/cortex</string>
                 </map>
             </array>
+            <!-- rendering -->
+            <!-- 
+            "rendering": [
+                {
+                    "id": "https://api.deutsche-digitale-bibliothek.de/binary/8fac26ef-8b2d-47ef-94c3-259326c82ac4.pdf",
+                    "type": "Text",
+                    "label":
+                    {
+                        "de": ["PDF-Ansicht"]
+                    },
+                    "format": "application/pdf"
+                }
+            ],
+            -->
+            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
+                <array key="rendering">
+                    <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
+                        <map>
+                            <string key="id">
+                                <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
+                                <xsl:value-of select="@ref" />
+                                <xsl:text>.pdf</xsl:text>
+                            </string>
+                            <string key="type">Text</string>
+                            <map key="label">
+                                <array key="de">
+                                    <string>PDF-Ansicht</string>
+                                </array>
+                            </map>
+                            <string key="format">application/pdf</string>
+                        </map>
+                    </xsl:for-each>
+                </array>
+            </xsl:if>
             <!-- start (canvas) -->
             <map key="start">
                 <string key="id">
@@ -325,7 +359,7 @@ limitations under the License.
                                 <string key="type">AnnotationPage</string>
                                 <array key="items">
                                     <!-- images -->
-                                    <xsl:if test="@mimetype = 'image/jpeg'">
+                                    <xsl:if test="@mimetype = 'image/jpeg' or @mimetype = 'application/pdf'">
                                         <map>
                                             <string key="id">
                                                 <xsl:value-of select="$uri" />
@@ -431,29 +465,23 @@ limitations under the License.
                                 <string key="type">Range</string>
                                 <map key="label">
                                     <array key="de">
-                                        <string>
-                                            <xsl:value-of select="@name" />
-                                        </string>
-                                        <xsl:if test="@name2">
-                                            <string>
-                                                <xsl:value-of select="@name2" />
-                                            </string>
-                                        </xsl:if>
-                                        <xsl:if test="@name3">
-                                            <string>
-                                                <xsl:value-of select="@name3" />
-                                            </string>
-                                        </xsl:if>
-                                        <xsl:if test="@name4">
-                                            <string>
-                                                <xsl:value-of select="@name4" />
-                                            </string>
-                                        </xsl:if>
-                                        <xsl:if test="@name5">
-                                            <string>
-                                                <xsl:value-of select="@name5" />
-                                            </string>
-                                        </xsl:if>
+                                        <xsl:choose>
+                                            <xsl:when test="@name3">
+                                                <string>
+                                                    <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                                                </string>
+                                            </xsl:when>
+                                            <xsl:when test="@name2">
+                                                <string>
+                                                    <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                                                </string>
+                                            </xsl:when>
+                                            <xsl:when test="@name">
+                                                <string>
+                                                    <xsl:value-of select="@name" />
+                                                </string>
+                                            </xsl:when>
+                                        </xsl:choose>
                                     </array>
                                 </map>
                                 <array key="items">
