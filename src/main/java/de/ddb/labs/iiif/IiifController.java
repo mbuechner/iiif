@@ -19,11 +19,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import javax.xml.transform.Templates;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
@@ -44,7 +43,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -68,11 +66,11 @@ class IiifController {
 
     @Value("classpath:transform-to-xml.xsl")
     private Resource transformToXml;
-    private String transformatToXmlString;
+    private Templates templates01;
 
     @Value("classpath:transform-to-json.xsl")
     private Resource transformatToJson;
-    private String transformToJsonString;
+    private Templates templates02;
 
     public IiifController() throws URISyntaxException, IOException {
         final Dispatcher dispatcher = new Dispatcher();
@@ -88,9 +86,13 @@ class IiifController {
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void doSomethingAfterStartup() throws IOException {
-        transformatToXmlString = StreamUtils.copyToString(transformToXml.getInputStream(), StandardCharsets.UTF_8);
-        transformToJsonString = StreamUtils.copyToString(transformatToJson.getInputStream(), StandardCharsets.UTF_8);
+    public void doSomethingAfterStartup() throws TransformerConfigurationException, IOException {
+
+        final StreamSource ss01 = new StreamSource(transformToXml.getInputStream());
+        final StreamSource ss02 = new StreamSource(transformatToJson.getInputStream());
+
+        templates01 = factory.newTemplates(ss01);
+        templates02 = factory.newTemplates(ss02);
     }
 
     @RequestMapping(
@@ -119,17 +121,18 @@ class IiifController {
 
         try (final Response response = httpClient.newCall(getRequest).execute()) {
             if (response.isSuccessful()) {
-                final StreamSource ss01 = new StreamSource(new StringReader(transformatToXmlString));
-                final StreamSource ss02 = new StreamSource(new StringReader(transformToJsonString));
 
                 final InputStream inputXmlString = response.body().byteStream();
 
                 final StringWriter writer = new StringWriter();
                 final StreamResult result = new StreamResult(writer);
-                final Transformer transformer01 = factory.newTransformer(ss01);
+
+                final Transformer transformer01 = templates01.newTransformer();
                 transformer01.setParameter("uri", baseUrl + request.getRequestURI());
-                final TransformerHandler transformer02 = ((SAXTransformerFactory) factory).newTransformerHandler(ss02);
+
+                final TransformerHandler transformer02 = ((SAXTransformerFactory) factory).newTransformerHandler(templates02);
                 transformer02.setResult(result);
+                
                 transformer01.transform(new StreamSource(inputXmlString), new SAXResult(transformer02));
 
                 return ResponseEntity.ok().body(writer.toString());
