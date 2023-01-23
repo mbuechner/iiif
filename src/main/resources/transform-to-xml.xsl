@@ -83,7 +83,6 @@ limitations under the License.
                                                 <xsl:value-of select="." />
                                                 <xsl:text>&lt;/a&gt;</xsl:text>
                                             </xsl:when>
-                                            
                                             <xsl:otherwise>
                                                 <xsl:value-of select="." />
                                             </xsl:otherwise>
@@ -248,27 +247,29 @@ limitations under the License.
             </array>
             <!-- logo -->
             <!-- TODO: logo at this position is not IIIF Presentation v3 valid, but Mirador 3 will display a logo (which is nice) -->
-            <array key="logo">
-                <map>
-                    <string key="id">
-                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                        <xsl:value-of select="$providerLogo" />
-                        <xsl:text>/full/full/0/default.jpg</xsl:text>
-                    </string>
-                    <string key="type">Image</string>
-                    <string key="format">image/jpg</string>
-                    <array key="service">
-                        <map>
-                            <string key="id">
-                                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                <xsl:value-of select="$providerLogo" />
-                            </string>
-                            <string key="type">ImageService2</string>
-                            <string key="profile">level2</string>
-                        </map>
-                    </array>
-                </map>
-            </array>
+            <xsl:if test="$providerLogo">
+                <array key="logo">
+                    <map>
+                        <string key="id">
+                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                            <xsl:value-of select="$providerLogo" />
+                            <xsl:text>/full/full/0/default.jpg</xsl:text>
+                        </string>
+                        <string key="type">Image</string>
+                        <string key="format">image/jpg</string>
+                        <array key="service">
+                            <map>
+                                <string key="id">
+                                    <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                    <xsl:value-of select="$providerLogo" />
+                                </string>
+                                <string key="type">ImageService2</string>
+                                <string key="profile">level2</string>
+                            </map>
+                        </array>
+                    </map>
+                </array>
+            </xsl:if>
             <!-- seeAlso -->
             <array key="seeAlso">
                 <map>
