@@ -318,7 +318,7 @@ limitations under the License.
             </map>
             <!-- items -->
             <array key="items">
-                <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary">
+                <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mp4']">
                     <map>
                         <string key="id">
                             <xsl:value-of select="$uri" />
@@ -457,6 +457,33 @@ limitations under the License.
                                                 </string>
                                             </map>
                                         </xsl:when>
+                                        <!-- audio -->
+                                        <xsl:when test="@mimetype = 'audio/mp4'">
+                                            <map>
+                                                <string key="id">
+                                                    <xsl:value-of select="$uri" />
+                                                    <xsl:text>/annotation/p0001-image</xsl:text>
+                                                </string>
+                                                <string key="type">Annotation</string>
+                                                <string key="motivation">painting</string>
+                                                <map key="body">
+                                                    <string key="id">
+                                                        <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
+                                                        <xsl:value-of select="@ref" />
+                                                        <xsl:text>.mp4</xsl:text>
+                                                    </string>
+                                                    <string key="type">Sound</string>
+                                                    <!-- <number key="duration">96.0</number> -->
+                                                    <string key="format">audio/mp4</string>
+                                                </map>
+                                                <string key="target">
+                                                    <xsl:value-of select="$uri" />
+                                                    <xsl:text>/canvas/p</xsl:text>
+                                                    <xsl:value-of select="position()" />
+                                                    <xsl:text>/1</xsl:text>
+                                                </string>
+                                            </map>
+                                        </xsl:when>
                                     </xsl:choose>
                                 </array>
                             </map>
@@ -481,7 +508,7 @@ limitations under the License.
                         </array>
                     </map>
                     <array key="items">
-                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4']">
+                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mp4']">
                             <map>
                                 <string key="id">
                                     <xsl:value-of select="$uri" />
