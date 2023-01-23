@@ -113,7 +113,7 @@ class IiifController {
             value = "/{id}"
     )
     @ResponseBody
-    @CrossOrigin("${iiif.baseurl}")
+    @CrossOrigin(origins = "${iiif.baseurl}", allowedHeaders = "Requestor-Type")
     public ResponseEntity<String> getResource(HttpServletRequest request, @PathVariable String id) throws FileNotFoundException, IOException, TransformerConfigurationException, TransformerException {
 
         final Request getRequest = new Request.Builder()
@@ -135,7 +135,7 @@ class IiifController {
 
                 final TransformerHandler transformer02 = ((SAXTransformerFactory) factory).newTransformerHandler(templates02);
                 transformer02.setResult(result);
-                
+
                 transformer01.transform(new StreamSource(inputXmlString), new SAXResult(transformer02));
 
                 return ResponseEntity.ok().body(writer.toString());
