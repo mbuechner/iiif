@@ -76,6 +76,14 @@ limitations under the License.
                                                 <xsl:value-of select="." />
                                                 <xsl:text>&lt;/a&gt;</xsl:text>
                                             </xsl:when>
+                                            <xsl:when test="starts-with(., 'http://') or starts-with(., 'https://')">
+                                                <xsl:text>&lt;a href="</xsl:text>
+                                                <xsl:value-of select="." />
+                                                <xsl:text>" target="_blank"&gt;</xsl:text>
+                                                <xsl:value-of select="." />
+                                                <xsl:text>&lt;/a&gt;</xsl:text>
+                                            </xsl:when>
+                                            
                                             <xsl:otherwise>
                                                 <xsl:value-of select="." />
                                             </xsl:otherwise>
