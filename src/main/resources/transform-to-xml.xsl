@@ -318,7 +318,7 @@ limitations under the License.
             </map>
             <!-- items -->
             <array key="items">
-                <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mp4']">
+                <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mpeg']">
                     <map>
                         <string key="id">
                             <xsl:value-of select="$uri" />
@@ -458,7 +458,7 @@ limitations under the License.
                                             </map>
                                         </xsl:when>
                                         <!-- audio -->
-                                        <xsl:when test="@mimetype = 'audio/mp4'">
+                                        <xsl:when test="@mimetype = 'audio/mpeg'">
                                             <map>
                                                 <string key="id">
                                                     <xsl:value-of select="$uri" />
@@ -508,7 +508,7 @@ limitations under the License.
                         </array>
                     </map>
                     <array key="items">
-                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mp4']">
+                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mpeg']">
                             <map>
                                 <string key="id">
                                     <xsl:value-of select="$uri" />
