@@ -481,7 +481,7 @@ limitations under the License.
                         </array>
                     </map>
                     <array key="items">
-                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary">
+                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4']">
                             <map>
                                 <string key="id">
                                     <xsl:value-of select="$uri" />
