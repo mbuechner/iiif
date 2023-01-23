@@ -51,7 +51,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@CrossOrigin(maxAge = 3600)
+@CrossOrigin(origins = "*", allowedHeaders = "*", maxAge = 3600)
 @Slf4j
 class IiifController {
 
@@ -113,7 +113,6 @@ class IiifController {
             value = "/{id}"
     )
     @ResponseBody
-    @CrossOrigin(origins = "${iiif.baseurl}", allowedHeaders = "Requestor-Type")
     public ResponseEntity<String> getResource(HttpServletRequest request, @PathVariable String id) throws FileNotFoundException, IOException, TransformerConfigurationException, TransformerException {
 
         final Request getRequest = new Request.Builder()
