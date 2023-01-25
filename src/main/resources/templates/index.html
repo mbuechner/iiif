@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="utf-8">
+        <meta content="width=device-width, initial-scale=1" name="viewport">
+        <link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" rel="stylesheet">
+        <title>Deutsche Digitale Bibliothek | IIIF presentation API 3.0-Manifeste</title>
+        <style>
+            body {
+                background: #EC0A3C;
+                background: linear-gradient(276.83deg, #EC0A3C, #A5003B);
+                min-height: 100vh;
+            }
+            .form-control::placeholder {
+                color: #ccc;
+            }</style>
+        <link crossorigin="anonymous" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" referrerpolicy="no-referrer" rel="stylesheet" />
+    </head>
+    <body>
+        <div class="container">
+            <!-- For demo purpose -->
+            <div class="row py-5">
+                <div class="col-lg-9 mx-auto text-white text-center">
+                    <h1 class="display-4">IIIF presentation API 3.0</h1>
+                    <p class="lead mb-0">Mit diesem Dienst können DDB-Objekte zu IIIF presentation API-Manifeste umgewandelt werden.</p>
+                    <p class="lead">Implementierung auf <a class="text-white" href="https://github.com/mbuechner/iiif"><u>Github</u></a>. </p>
+                </div>
+            </div>
+            <!-- End -->
+            <div class="row mb-5">
+                <div class="p-1 bg-light rounded shadow-sm mb-4">
+                    <div class="input-group">
+                        <button aria-expanded="false" class="btn btn-light dropdown-toggle rounded-start" data-bs-toggle="dropdown" id="displayType" type="button">IIIF presentation API 3.0 manifest</button>
+                        <ul class="dropdown-menu dropdown-menu-end" id="displayTypeDropdown">
+                            <li>
+                                <a class="dropdown-item" data-href="">IIIF presentation API 3.0 manifest</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" data-href="https://projectmirador.org/embed/?iiif-content=">Mirador 3</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" data-href="https://uv-v3.netlify.app/#?manifest=">Universal Viewer 3</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" data-href="https://uv-v4.netlify.app/#?manifest=">Universal Viewer 4</a>
+                            </li>
+                        </ul>
+                        <input aria-label="Text input with dropdown button" class="form-control border-0" id="input" placeholder="https://www.deutsche-digitale-bibliothek.de/item/CRHMM44XWLG7ZNH55BQ5GSAHTYLXJ7Z4" type="text">
+                        <a class="btn bg-light rounded-end disabled" data-href="" href="#" id="los" role="button" target="_blank">Los!</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script crossorigin="anonymous" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+        <script crossorigin="anonymous" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                function valueChanged() {
+                    const url = window.location.href.endsWith("/") ? window.location.href: window.location.href + "/";
+                    const string = $("#input").val();
+                    const regexp = new RegExp("https:\/\/www\.deutsche-digitale-bibliothek\.de\/item\/([ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]{32})", "g");
+                    const match = regexp.exec(string);
+                    if (match !== null && match[1] !== null) {
+                        if ($("#los").attr("data-href").length === 0) {
+                            $("#los").attr("href", url + match[1]);
+                        } else {
+                            $("#los").attr("href", $("#los").attr("data-href") + encodeURIComponent(url + match[1]));
+                        }
+                        $("#los").removeClass("disabled");
+                    } else {
+                        $("#los").attr("href", "#");
+                        $("#los").addClass("disabled");
+                    }
+                }
+                
+                $(".dropdown-menu li a").click(function () {
+                    $(".btn:first-child").text($(this).text());
+                    $(".btn:first-child").val($(this).text());
+                    $("#los").attr("data-href", $(this).attr("data-href"));
+                    valueChanged();
+                });
+                
+                $('#input').on('input', function () {
+                    valueChanged();
+                });
+                
+                $('#input').on('keydown', function (e) {
+                    if (e.which === 13 && ! $("#los").hasClass("disabled")) {
+                        window.open($("#los").attr("href"), '_blank');
+                    }
+                });
+            });</script>
+    </body>
+</html>
