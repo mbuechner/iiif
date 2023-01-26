@@ -394,7 +394,7 @@ limitations under the License.
                                                     <xsl:value-of select="@name" />
                                                 </xsl:when>
                                                 <xsl:otherwise>
-                                                    <xsl:text>Objekt </xsl:text>
+                                                    <xsl:text>Digitalisat </xsl:text>
                                                     <xsl:value-of select="position()" />
                                                 </xsl:otherwise>
                                             </xsl:choose>
@@ -450,7 +450,7 @@ limitations under the License.
                                 <xsl:value-of select="@name" />
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:text>Objekt </xsl:text>
+                                <xsl:text>Digitalisat </xsl:text>
                                 <xsl:value-of select="position()" />
                             </xsl:otherwise>
                         </xsl:choose>
@@ -526,7 +526,7 @@ limitations under the License.
                                                             <xsl:value-of select="@name" />
                                                         </xsl:when>
                                                         <xsl:otherwise>
-                                                            <xsl:text>Objekt </xsl:text>
+                                                            <xsl:text>Digitalisat </xsl:text>
                                                             <xsl:value-of select="position()" />
                                                         </xsl:otherwise>
                                                     </xsl:choose>
@@ -593,7 +593,7 @@ limitations under the License.
                                 <xsl:value-of select="@name" />
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:text>Objekt </xsl:text>
+                                <xsl:text>Digitalisat </xsl:text>
                                 <xsl:value-of select="position()" />
                             </xsl:otherwise>
                         </xsl:choose>
@@ -646,7 +646,7 @@ limitations under the License.
                                                             <xsl:value-of select="@name" />
                                                         </xsl:when>
                                                         <xsl:otherwise>
-                                                            <xsl:text>Objekt </xsl:text>
+                                                            <xsl:text>Digitalisat </xsl:text>
                                                             <xsl:value-of select="position()" />
                                                         </xsl:otherwise>
                                                     </xsl:choose>
@@ -713,7 +713,7 @@ limitations under the License.
                                 <xsl:value-of select="@name" />
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:text>Objekt </xsl:text>
+                                <xsl:text>Digitalisat </xsl:text>
                                 <xsl:value-of select="position()" />
                             </xsl:otherwise>
                         </xsl:choose>
@@ -813,7 +813,7 @@ limitations under the License.
                                 <xsl:value-of select="@name" />
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:text>Objekt </xsl:text>
+                                <xsl:text>Digitalisat </xsl:text>
                                 <xsl:value-of select="position()" />
                             </xsl:otherwise>
                         </xsl:choose>
