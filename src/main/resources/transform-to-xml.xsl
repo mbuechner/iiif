@@ -354,6 +354,14 @@ limitations under the License.
             <!-- items -->
             <array key="items">
                 <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mpeg']">
+                    <xsl:variable name="infoJsonUrl">
+                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                        <xsl:value-of select="@ref" />
+                        <xsl:text>/info.json</xsl:text>
+                    </xsl:variable>
+                    <xsl:variable as="map(*)" name="infoJson" select="json-doc($infoJsonUrl)" />
+                    <xsl:variable name="imageWidth" select="$infoJson?width" />
+                    <xsl:variable name="imageHeight" select="$infoJson?height" />
                     <map>
                         <string key="id">
                             <xsl:value-of select="$uri" />
@@ -382,8 +390,12 @@ limitations under the License.
                                 </xsl:choose>
                             </array>
                         </map>
-                        <number key="height">800</number>
-                        <number key="width">600</number>
+                        <number key="height">
+                            <xsl:value-of select="$imageHeight" />
+                        </number>
+                        <number key="width">
+                            <xsl:value-of select="$imageWidth" />
+                        </number>
                         <array key="items">
                             <map>
                                 <string key="id">
@@ -422,8 +434,12 @@ limitations under the License.
                                                             <string key="profile">level2</string>
                                                         </map>
                                                     </array>
-                                                    <number key="height">800</number>
-                                                    <number key="width">600</number>
+                                                    <number key="height">
+                                                        <xsl:value-of select="$imageHeight" />
+                                                    </number>
+                                                    <number key="width">
+                                                        <xsl:value-of select="$imageWidth" />
+                                                    </number>
                                                     <array key="metadata">
                                                         <map>
                                                             <map key="label">
