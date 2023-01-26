@@ -516,6 +516,45 @@ limitations under the License.
                                 </array>
                             </map>
                         </array>
+                        <!-- thumbnail -->
+                        <!-- 
+                        "thumbnail": [
+                            {
+                                "id": "https://api.nakala.fr/iiif/10.34847/nkl.ec7d2tce/321914a14a7fbe839834308cb3c758eaa832bf36/full/full/0/default.jpg",
+                                "type": "Image",
+                                "service": [
+                                    {
+                                        "id": "https://api.nakala.fr/iiif/10.34847/nkl.ec7d2tce/321914a14a7fbe839834308cb3c758eaa832bf36",
+                                        "type": "ImageService3",
+                                        "profile": "level2"
+                                    }
+                                ]
+                            }
+                        ]
+                        -->
+                        <xsl:if test="@mimetype = 'image/jpeg' or @mimetype = 'application/pdf'">
+                            <array key="thumbnail">
+                                <map>
+                                    <string key="id">
+                                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                        <xsl:value-of select="@ref" />
+                                        <xsl:text>/full/full/0/default.jpg</xsl:text>
+                                    </string>
+                                    <string key="type">Image</string>
+                                    <string key="format">image/jpeg</string>
+                                    <array key="service">
+                                        <map>
+                                            <string key="id">
+                                                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                                <xsl:value-of select="@ref" />
+                                            </string>
+                                            <string key="type">ImageService2</string>
+                                            <string key="profile">level2</string>
+                                        </map>
+                                    </array>
+                                </map>
+                            </array>
+                        </xsl:if>
                     </map>
                 </xsl:for-each>
             </array>
