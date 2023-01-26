@@ -353,233 +353,7 @@ limitations under the License.
             </map>
             <!-- items -->
             <array key="items">
-                <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf' or @mimetype = 'video/mp4' or @mimetype = 'audio/mpeg']">
-                    <xsl:variable name="infoJsonUrl">
-                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                        <xsl:value-of select="@ref" />
-                        <xsl:text>/info.json</xsl:text>
-                    </xsl:variable>
-                    <xsl:variable as="map(*)" name="infoJson" select="json-doc($infoJsonUrl)" />
-                    <xsl:variable name="imageWidth" select="$infoJson?width" />
-                    <xsl:variable name="imageHeight" select="$infoJson?height" />
-                    <map>
-                        <string key="id">
-                            <xsl:value-of select="$uri" />
-                            <xsl:text>/canvas/p</xsl:text>
-                            <xsl:value-of select="position()" />
-                        </string>
-                        <string key="type">Canvas</string>
-                        <map key="label">
-                            <array key="de">
-                                <xsl:choose>
-                                    <xsl:when test="@name3">
-                                        <string>
-                                            <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                                        </string>
-                                    </xsl:when>
-                                    <xsl:when test="@name2">
-                                        <string>
-                                            <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                                        </string>
-                                    </xsl:when>
-                                    <xsl:when test="@name">
-                                        <string>
-                                            <xsl:value-of select="@name" />
-                                        </string>
-                                    </xsl:when>
-                                </xsl:choose>
-                            </array>
-                        </map>
-                        <number key="height">
-                            <xsl:value-of select="$imageHeight" />
-                        </number>
-                        <number key="width">
-                            <xsl:value-of select="$imageWidth" />
-                        </number>
-                        <array key="items">
-                            <map>
-                                <string key="id">
-                                    <xsl:value-of select="$uri" />
-                                    <xsl:text>/canvas/p</xsl:text>
-                                    <xsl:value-of select="position()" />
-                                    <xsl:text>/1</xsl:text>
-                                </string>
-                                <string key="type">AnnotationPage</string>
-                                <array key="items">
-                                    <xsl:choose>
-                                        <!-- images and pdf (pdf always have a preview image) -->
-                                        <xsl:when test="@mimetype = 'image/jpeg' or @mimetype = 'application/pdf'">
-                                            <map>
-                                                <string key="id">
-                                                    <xsl:value-of select="$uri" />
-                                                    <xsl:text>/annotation/p0001-image</xsl:text>
-                                                </string>
-                                                <string key="type">Annotation</string>
-                                                <string key="motivation">painting</string>
-                                                <map key="body">
-                                                    <string key="id">
-                                                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                                        <xsl:value-of select="@ref" />
-                                                        <xsl:text>/full/full/0/default.jpg</xsl:text>
-                                                    </string>
-                                                    <string key="type">Image</string>
-                                                    <string key="format">image/jpeg</string>
-                                                    <array key="service">
-                                                        <map>
-                                                            <string key="id">
-                                                                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                                                <xsl:value-of select="@ref" />
-                                                            </string>
-                                                            <string key="type">ImageService2</string>
-                                                            <string key="profile">level2</string>
-                                                        </map>
-                                                    </array>
-                                                    <number key="height">
-                                                        <xsl:value-of select="$imageHeight" />
-                                                    </number>
-                                                    <number key="width">
-                                                        <xsl:value-of select="$imageWidth" />
-                                                    </number>
-                                                    <array key="metadata">
-                                                        <map>
-                                                            <map key="label">
-                                                                <array key="de">
-                                                                    <string>Beschreibung</string>
-                                                                </array>
-                                                            </map>
-                                                            <map key="value">
-                                                                <array key="de">
-                                                                    <xsl:choose>
-                                                                        <xsl:when test="@name3">
-                                                                            <string>
-                                                                                <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                                                                            </string>
-                                                                        </xsl:when>
-                                                                        <xsl:when test="@name2">
-                                                                            <string>
-                                                                                <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                                                                            </string>
-                                                                        </xsl:when>
-                                                                        <xsl:when test="@name">
-                                                                            <string>
-                                                                                <xsl:value-of select="@name" />
-                                                                            </string>
-                                                                        </xsl:when>
-                                                                    </xsl:choose>
-                                                                </array>
-                                                            </map>
-                                                        </map>
-                                                    </array>
-                                                </map>
-                                                <string key="target">
-                                                    <xsl:value-of select="$uri" />
-                                                    <xsl:text>/canvas/p</xsl:text>
-                                                    <xsl:value-of select="position()" />
-                                                    <xsl:text>/1</xsl:text>
-                                                </string>
-                                            </map>
-                                        </xsl:when>
-                                        <!-- videos -->
-                                        <xsl:when test="@mimetype = 'video/mp4'">
-                                            <map>
-                                                <string key="id">
-                                                    <xsl:value-of select="$uri" />
-                                                    <xsl:text>/annotation/p0001-image</xsl:text>
-                                                </string>
-                                                <string key="type">Annotation</string>
-                                                <string key="motivation">painting</string>
-                                                <map key="body">
-                                                    <string key="id">
-                                                        <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
-                                                        <xsl:value-of select="@ref" />
-                                                        <xsl:text>.mp4</xsl:text>
-                                                    </string>
-                                                    <string key="type">Video</string>
-                                                    <number key="height">360</number>
-                                                    <number key="width">480</number>
-                                                    <!-- <number key="duration">96.0</number> -->
-                                                    <string key="format">video/mp4</string>
-                                                </map>
-                                                <string key="target">
-                                                    <xsl:value-of select="$uri" />
-                                                    <xsl:text>/canvas/p</xsl:text>
-                                                    <xsl:value-of select="position()" />
-                                                    <xsl:text>/1</xsl:text>
-                                                </string>
-                                            </map>
-                                        </xsl:when>
-                                        <!-- audio -->
-                                        <xsl:when test="@mimetype = 'audio/mpeg'">
-                                            <map>
-                                                <string key="id">
-                                                    <xsl:value-of select="$uri" />
-                                                    <xsl:text>/annotation/p0001-image</xsl:text>
-                                                </string>
-                                                <string key="type">Annotation</string>
-                                                <string key="motivation">painting</string>
-                                                <map key="body">
-                                                    <string key="id">
-                                                        <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
-                                                        <xsl:value-of select="@ref" />
-                                                        <xsl:text>.mp4</xsl:text>
-                                                    </string>
-                                                    <string key="type">Sound</string>
-                                                    <!-- <number key="duration">96.0</number> -->
-                                                    <string key="format">audio/mp4</string>
-                                                </map>
-                                                <string key="target">
-                                                    <xsl:value-of select="$uri" />
-                                                    <xsl:text>/canvas/p</xsl:text>
-                                                    <xsl:value-of select="position()" />
-                                                    <xsl:text>/1</xsl:text>
-                                                </string>
-                                            </map>
-                                        </xsl:when>
-                                    </xsl:choose>
-                                </array>
-                            </map>
-                        </array>
-                        <!-- thumbnail -->
-                        <!-- 
-                        "thumbnail": [
-                            {
-                                "id": "https://api.nakala.fr/iiif/10.34847/nkl.ec7d2tce/321914a14a7fbe839834308cb3c758eaa832bf36/full/full/0/default.jpg",
-                                "type": "Image",
-                                "service": [
-                                    {
-                                        "id": "https://api.nakala.fr/iiif/10.34847/nkl.ec7d2tce/321914a14a7fbe839834308cb3c758eaa832bf36",
-                                        "type": "ImageService3",
-                                        "profile": "level2"
-                                    }
-                                ]
-                            }
-                        ]
-                        -->
-                        <xsl:if test="@mimetype = 'image/jpeg' or @mimetype = 'application/pdf'">
-                            <array key="thumbnail">
-                                <map>
-                                    <string key="id">
-                                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                        <xsl:value-of select="@ref" />
-                                        <xsl:text>/full/full/0/default.jpg</xsl:text>
-                                    </string>
-                                    <string key="type">Image</string>
-                                    <string key="format">image/jpeg</string>
-                                    <array key="service">
-                                        <map>
-                                            <string key="id">
-                                                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                                <xsl:value-of select="@ref" />
-                                            </string>
-                                            <string key="type">ImageService2</string>
-                                            <string key="profile">level2</string>
-                                        </map>
-                                    </array>
-                                </map>
-                            </array>
-                        </xsl:if>
-                    </map>
-                </xsl:for-each>
+                <xsl:apply-templates />
             </array>
             <!-- structures -->
             <array key="structures">
@@ -643,6 +417,318 @@ limitations under the License.
                 </map>
             </array>
             <!--  -->
+        </map>
+    </xsl:template>
+    <!-- template for images and pdf -->
+    <xsl:template match="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg' or @mimetype = 'application/pdf']">
+        <xsl:variable name="infoJsonUrl">
+            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+            <xsl:value-of select="@ref" />
+            <xsl:text>/info.json</xsl:text>
+        </xsl:variable>
+        <xsl:variable as="map(*)" name="infoJson" select="json-doc($infoJsonUrl)" />
+        <xsl:variable name="imageWidth" select="$infoJson?width" />
+        <xsl:variable name="imageHeight" select="$infoJson?height" />
+        <map>
+            <string key="id">
+                <xsl:value-of select="$uri" />
+                <xsl:text>/canvas/p</xsl:text>
+                <xsl:value-of select="position()" />
+            </string>
+            <string key="type">Canvas</string>
+            <map key="label">
+                <array key="de">
+                    <xsl:choose>
+                        <xsl:when test="@name3">
+                            <string>
+                                <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                            </string>
+                        </xsl:when>
+                        <xsl:when test="@name2">
+                            <string>
+                                <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                            </string>
+                        </xsl:when>
+                        <xsl:when test="@name">
+                            <string>
+                                <xsl:value-of select="@name" />
+                            </string>
+                        </xsl:when>
+                    </xsl:choose>
+                </array>
+            </map>
+            <number key="height">
+                <xsl:value-of select="$imageHeight" />
+            </number>
+            <number key="width">
+                <xsl:value-of select="$imageWidth" />
+            </number>
+            <array key="items">
+                <map>
+                    <string key="id">
+                        <xsl:value-of select="$uri" />
+                        <xsl:text>/canvas/p</xsl:text>
+                        <xsl:value-of select="position()" />
+                        <xsl:text>/1</xsl:text>
+                    </string>
+                    <string key="type">AnnotationPage</string>
+                    <array key="items">
+                        <!-- images and pdf (pdf always have a preview image) -->
+                        <map>
+                            <string key="id">
+                                <xsl:value-of select="$uri" />
+                                <xsl:text>/annotation/p0001-image</xsl:text>
+                            </string>
+                            <string key="type">Annotation</string>
+                            <string key="motivation">painting</string>
+                            <map key="body">
+                                <string key="id">
+                                    <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                    <xsl:value-of select="@ref" />
+                                    <xsl:text>/full/full/0/default.jpg</xsl:text>
+                                </string>
+                                <string key="type">Image</string>
+                                <string key="format">image/jpeg</string>
+                                <array key="service">
+                                    <map>
+                                        <string key="id">
+                                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                            <xsl:value-of select="@ref" />
+                                        </string>
+                                        <string key="type">ImageService2</string>
+                                        <string key="profile">level2</string>
+                                    </map>
+                                </array>
+                                <number key="height">
+                                    <xsl:value-of select="$imageHeight" />
+                                </number>
+                                <number key="width">
+                                    <xsl:value-of select="$imageWidth" />
+                                </number>
+                                <array key="metadata">
+                                    <map>
+                                        <map key="label">
+                                            <array key="de">
+                                                <string>Beschreibung</string>
+                                            </array>
+                                        </map>
+                                        <map key="value">
+                                            <array key="de">
+                                                <xsl:choose>
+                                                    <xsl:when test="@name3">
+                                                        <string>
+                                                            <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                                                        </string>
+                                                    </xsl:when>
+                                                    <xsl:when test="@name2">
+                                                        <string>
+                                                            <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                                                        </string>
+                                                    </xsl:when>
+                                                    <xsl:when test="@name">
+                                                        <string>
+                                                            <xsl:value-of select="@name" />
+                                                        </string>
+                                                    </xsl:when>
+                                                </xsl:choose>
+                                            </array>
+                                        </map>
+                                    </map>
+                                </array>
+                            </map>
+                            <string key="target">
+                                <xsl:value-of select="$uri" />
+                                <xsl:text>/canvas/p</xsl:text>
+                                <xsl:value-of select="position()" />
+                                <xsl:text>/1</xsl:text>
+                            </string>
+                        </map>
+                    </array>
+                </map>
+            </array>
+            <!-- thumbnail -->
+            <!-- 
+                        "thumbnail": [
+                            {
+                                "id": "https://api.nakala.fr/iiif/10.34847/nkl.ec7d2tce/321914a14a7fbe839834308cb3c758eaa832bf36/full/full/0/default.jpg",
+                                "type": "Image",
+                                "service": [
+                                    {
+                                        "id": "https://api.nakala.fr/iiif/10.34847/nkl.ec7d2tce/321914a14a7fbe839834308cb3c758eaa832bf36",
+                                        "type": "ImageService3",
+                                        "profile": "level2"
+                                    }
+                                ]
+                            }
+                        ]
+                        -->
+            <xsl:if test="@mimetype = 'image/jpeg' or @mimetype = 'application/pdf'">
+                <array key="thumbnail">
+                    <map>
+                        <string key="id">
+                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                            <xsl:value-of select="@ref" />
+                            <xsl:text>/full/full/0/default.jpg</xsl:text>
+                        </string>
+                        <string key="type">Image</string>
+                        <string key="format">image/jpeg</string>
+                        <array key="service">
+                            <map>
+                                <string key="id">
+                                    <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                    <xsl:value-of select="@ref" />
+                                </string>
+                                <string key="type">ImageService2</string>
+                                <string key="profile">level2</string>
+                            </map>
+                        </array>
+                    </map>
+                </array>
+            </xsl:if>
+        </map>
+    </xsl:template>
+    <!-- template for video -->
+    <xsl:template match="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'video/mp4']">
+        <map>
+            <string key="id">
+                <xsl:value-of select="$uri" />
+                <xsl:text>/canvas/p</xsl:text>
+                <xsl:value-of select="position()" />
+            </string>
+            <string key="type">Canvas</string>
+            <map key="label">
+                <array key="de">
+                    <xsl:choose>
+                        <xsl:when test="@name3">
+                            <string>
+                                <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                            </string>
+                        </xsl:when>
+                        <xsl:when test="@name2">
+                            <string>
+                                <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                            </string>
+                        </xsl:when>
+                        <xsl:when test="@name">
+                            <string>
+                                <xsl:value-of select="@name" />
+                            </string>
+                        </xsl:when>
+                    </xsl:choose>
+                </array>
+            </map>
+            <number key="height">360</number>
+            <number key="width">480</number>
+            <array key="items">
+                <map>
+                    <string key="id">
+                        <xsl:value-of select="$uri" />
+                        <xsl:text>/canvas/p</xsl:text>
+                        <xsl:value-of select="position()" />
+                        <xsl:text>/1</xsl:text>
+                    </string>
+                    <string key="type">AnnotationPage</string>
+                    <array key="items">
+                        <!-- videos -->
+                        <map>
+                            <string key="id">
+                                <xsl:value-of select="$uri" />
+                                <xsl:text>/annotation/p0001-image</xsl:text>
+                            </string>
+                            <string key="type">Annotation</string>
+                            <string key="motivation">painting</string>
+                            <map key="body">
+                                <string key="id">
+                                    <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
+                                    <xsl:value-of select="@ref" />
+                                    <xsl:text>.mp4</xsl:text>
+                                </string>
+                                <string key="type">Video</string>
+                                <number key="height">360</number>
+                                <number key="width">480</number>
+                                <!-- <number key="duration">96.0</number> -->
+                                <string key="format">video/mp4</string>
+                            </map>
+                            <string key="target">
+                                <xsl:value-of select="$uri" />
+                                <xsl:text>/canvas/p</xsl:text>
+                                <xsl:value-of select="position()" />
+                                <xsl:text>/1</xsl:text>
+                            </string>
+                        </map>
+                    </array>
+                </map>
+            </array>
+        </map>
+    </xsl:template>
+    <!-- template for audio -->
+    <xsl:template match="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'audio/mpeg']">
+        <map>
+            <string key="id">
+                <xsl:value-of select="$uri" />
+                <xsl:text>/canvas/p</xsl:text>
+                <xsl:value-of select="position()" />
+            </string>
+            <string key="type">Canvas</string>
+            <map key="label">
+                <array key="de">
+                    <xsl:choose>
+                        <xsl:when test="@name3">
+                            <string>
+                                <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                            </string>
+                        </xsl:when>
+                        <xsl:when test="@name2">
+                            <string>
+                                <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                            </string>
+                        </xsl:when>
+                        <xsl:when test="@name">
+                            <string>
+                                <xsl:value-of select="@name" />
+                            </string>
+                        </xsl:when>
+                    </xsl:choose>
+                </array>
+            </map>
+            <array key="items">
+                <map>
+                    <string key="id">
+                        <xsl:value-of select="$uri" />
+                        <xsl:text>/canvas/p</xsl:text>
+                        <xsl:value-of select="position()" />
+                        <xsl:text>/1</xsl:text>
+                    </string>
+                    <string key="type">AnnotationPage</string>
+                    <array key="items">
+                        <!-- audio -->
+                        <map>
+                            <string key="id">
+                                <xsl:value-of select="$uri" />
+                                <xsl:text>/annotation/p0001-image</xsl:text>
+                            </string>
+                            <string key="type">Annotation</string>
+                            <string key="motivation">painting</string>
+                            <map key="body">
+                                <string key="id">
+                                    <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
+                                    <xsl:value-of select="@ref" />
+                                    <xsl:text>.mp4</xsl:text>
+                                </string>
+                                <string key="type">Sound</string>
+                                <!-- <number key="duration">96.0</number> -->
+                                <string key="format">audio/mp4</string>
+                            </map>
+                            <string key="target">
+                                <xsl:value-of select="$uri" />
+                                <xsl:text>/canvas/p</xsl:text>
+                                <xsl:value-of select="position()" />
+                                <xsl:text>/1</xsl:text>
+                            </string>
+                        </map>
+                    </array>
+                </map>
+            </array>
         </map>
     </xsl:template>
     <!-- default template -->
