@@ -176,7 +176,7 @@ limitations under the License.
                             </string>
                         </array>
                     </map>
-                    <array key="homepage">
+                    <array key="seeAlso">
                         <map>
                             <string key="id">
                                 <xsl:text>https://www.deutsche-digitale-bibliothek.de/organization/</xsl:text>
@@ -184,9 +184,10 @@ limitations under the License.
                             </string>
                             <string key="type">Text</string>
                             <map key="label">
-                                <array key="none">
+                                <array key="de">
                                     <string>
                                         <xsl:value-of select="/cortex:cortex/cortex:provider-info/cortex:provider-name" />
+                                        <xsl:text> bei der Deutschen Digitalen Bibliothek</xsl:text>
                                     </string>
                                 </array>
                             </map>
@@ -217,12 +218,19 @@ limitations under the License.
                         </array>
                     </xsl:if>
                     <xsl:if test="/cortex:cortex/cortex:provider-info/cortex:provider-uri">
-                        <array key="seeAlso">
+                        <array key="homepage">
                             <map>
                                 <string key="id">
                                     <xsl:value-of select="/cortex:cortex/cortex:provider-info/cortex:provider-uri" />
                                 </string>
                                 <string key="type">Text</string>
+                                <map key="label">
+                                    <array key="none">
+                                        <string>
+                                            <xsl:value-of select="/cortex:cortex/cortex:provider-info/cortex:provider-name" />
+                                        </string>
+                                    </array>
+                                </map>
                                 <string key="format">text/html</string>
                             </map>
                         </array>
