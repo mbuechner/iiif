@@ -722,6 +722,7 @@ limitations under the License.
             </map>
             <number key="height">360</number>
             <number key="width">480</number>
+            <number key="duration">321.0</number>
             <array key="items">
                 <map>
                     <string key="id">
@@ -750,7 +751,7 @@ limitations under the License.
                                 <number key="height">360</number>
                                 <number key="width">480</number>
                                 <!-- we don't know the duration and we'll never know -->
-                                <number key="duration">100.0</number>
+                                <number key="duration">321.0</number>
                                 <string key="format">video/mp4</string>
                             </map>
                             <string key="target">
