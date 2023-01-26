@@ -382,23 +382,23 @@ limitations under the License.
                                 <string key="type">Range</string>
                                 <map key="label">
                                     <array key="de">
-                                        <xsl:choose>
-                                            <xsl:when test="@name3">
-                                                <string>
+                                        <string>
+                                            <xsl:choose>
+                                                <xsl:when test="@name3 and string-length(@name3) > 0">
                                                     <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                                                </string>
-                                            </xsl:when>
-                                            <xsl:when test="@name2">
-                                                <string>
+                                                </xsl:when>
+                                                <xsl:when test="@name2 and string-length(@name2) > 0">
                                                     <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                                                </string>
-                                            </xsl:when>
-                                            <xsl:when test="@name">
-                                                <string>
+                                                </xsl:when>
+                                                <xsl:when test="@name and string-length(@name) > 0">
                                                     <xsl:value-of select="@name" />
-                                                </string>
-                                            </xsl:when>
-                                        </xsl:choose>
+                                                </xsl:when>
+                                                <xsl:otherwise>
+                                                    <xsl:text>Objekt </xsl:text>
+                                                    <xsl:value-of select="position()" />
+                                                </xsl:otherwise>
+                                            </xsl:choose>
+                                        </string>
                                     </array>
                                 </map>
                                 <array key="items">
@@ -438,23 +438,23 @@ limitations under the License.
             <string key="type">Canvas</string>
             <map key="label">
                 <array key="de">
-                    <xsl:choose>
-                        <xsl:when test="@name3">
-                            <string>
+                    <string>
+                        <xsl:choose>
+                            <xsl:when test="@name3 and string-length(@name3) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name2">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name2 and string-length(@name2) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name and string-length(@name) > 0">
                                 <xsl:value-of select="@name" />
-                            </string>
-                        </xsl:when>
-                    </xsl:choose>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>Objekt </xsl:text>
+                                <xsl:value-of select="position()" />
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </string>
                 </array>
             </map>
             <number key="height">
@@ -514,23 +514,23 @@ limitations under the License.
                                         </map>
                                         <map key="value">
                                             <array key="de">
-                                                <xsl:choose>
-                                                    <xsl:when test="@name3">
-                                                        <string>
+                                                <string>
+                                                    <xsl:choose>
+                                                        <xsl:when test="@name3 and string-length(@name3) > 0">
                                                             <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                                                        </string>
-                                                    </xsl:when>
-                                                    <xsl:when test="@name2">
-                                                        <string>
+                                                        </xsl:when>
+                                                        <xsl:when test="@name2 and string-length(@name2) > 0">
                                                             <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                                                        </string>
-                                                    </xsl:when>
-                                                    <xsl:when test="@name">
-                                                        <string>
+                                                        </xsl:when>
+                                                        <xsl:when test="@name and string-length(@name) > 0">
                                                             <xsl:value-of select="@name" />
-                                                        </string>
-                                                    </xsl:when>
-                                                </xsl:choose>
+                                                        </xsl:when>
+                                                        <xsl:otherwise>
+                                                            <xsl:text>Objekt </xsl:text>
+                                                            <xsl:value-of select="position()" />
+                                                        </xsl:otherwise>
+                                                    </xsl:choose>
+                                                </string>
                                             </array>
                                         </map>
                                     </map>
@@ -570,7 +570,7 @@ limitations under the License.
             </array>
         </map>
     </xsl:template>
-    <!-- template for images and pdf -->
+    <!-- template for pdf -->
     <xsl:template match="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
         <map>
             <string key="id">
@@ -581,23 +581,23 @@ limitations under the License.
             <string key="type">Canvas</string>
             <map key="label">
                 <array key="de">
-                    <xsl:choose>
-                        <xsl:when test="@name3">
-                            <string>
+                    <string>
+                        <xsl:choose>
+                            <xsl:when test="@name3 and string-length(@name3) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name2">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name2 and string-length(@name2) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name and string-length(@name) > 0">
                                 <xsl:value-of select="@name" />
-                            </string>
-                        </xsl:when>
-                    </xsl:choose>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>Objekt </xsl:text>
+                                <xsl:value-of select="position()" />
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </string>
                 </array>
             </map>
             <array key="items">
@@ -634,23 +634,23 @@ limitations under the License.
                                         </map>
                                         <map key="value">
                                             <array key="de">
-                                                <xsl:choose>
-                                                    <xsl:when test="@name3">
-                                                        <string>
+                                                <string>
+                                                    <xsl:choose>
+                                                        <xsl:when test="@name3 and string-length(@name3) > 0">
                                                             <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                                                        </string>
-                                                    </xsl:when>
-                                                    <xsl:when test="@name2">
-                                                        <string>
+                                                        </xsl:when>
+                                                        <xsl:when test="@name2 and string-length(@name2) > 0">
                                                             <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                                                        </string>
-                                                    </xsl:when>
-                                                    <xsl:when test="@name">
-                                                        <string>
+                                                        </xsl:when>
+                                                        <xsl:when test="@name and string-length(@name) > 0">
                                                             <xsl:value-of select="@name" />
-                                                        </string>
-                                                    </xsl:when>
-                                                </xsl:choose>
+                                                        </xsl:when>
+                                                        <xsl:otherwise>
+                                                            <xsl:text>Objekt </xsl:text>
+                                                            <xsl:value-of select="position()" />
+                                                        </xsl:otherwise>
+                                                    </xsl:choose>
+                                                </string>
                                             </array>
                                         </map>
                                     </map>
@@ -701,23 +701,23 @@ limitations under the License.
             <string key="type">Canvas</string>
             <map key="label">
                 <array key="de">
-                    <xsl:choose>
-                        <xsl:when test="@name3">
-                            <string>
+                    <string>
+                        <xsl:choose>
+                            <xsl:when test="@name3 and string-length(@name3) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name2">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name2 and string-length(@name2) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name and string-length(@name) > 0">
                                 <xsl:value-of select="@name" />
-                            </string>
-                        </xsl:when>
-                    </xsl:choose>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>Objekt </xsl:text>
+                                <xsl:value-of select="position()" />
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </string>
                 </array>
             </map>
             <number key="height">360</number>
@@ -749,7 +749,8 @@ limitations under the License.
                                 <string key="type">Video</string>
                                 <number key="height">360</number>
                                 <number key="width">480</number>
-                                <!-- <number key="duration">96.0</number> -->
+                                <!-- we don't know the duration and we'll never know -->
+                                <number key="duration">100.0</number>
                                 <string key="format">video/mp4</string>
                             </map>
                             <string key="target">
@@ -762,6 +763,30 @@ limitations under the License.
                     </array>
                 </map>
             </array>
+            <!-- thumbnail, because every video does have an thumbnail -->
+            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and @mimetype = 'image/jpeg']/@ref">
+                <array key="thumbnail">
+                    <map>
+                        <string key="id">
+                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                            <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and @mimetype = 'image/jpeg']/@ref" />
+                            <xsl:text>/full/full/0/default.jpg</xsl:text>
+                        </string>
+                        <string key="type">Image</string>
+                        <string key="format">image/jpeg</string>
+                        <array key="service">
+                            <map>
+                                <string key="id">
+                                    <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and @mimetype = 'image/jpeg']/@ref" />
+                                </string>
+                                <string key="type">ImageService2</string>
+                                <string key="profile">level2</string>
+                            </map>
+                        </array>
+                    </map>
+                </array>
+            </xsl:if>
         </map>
     </xsl:template>
     <!-- template for audio -->
@@ -775,23 +800,23 @@ limitations under the License.
             <string key="type">Canvas</string>
             <map key="label">
                 <array key="de">
-                    <xsl:choose>
-                        <xsl:when test="@name3">
-                            <string>
+                    <string>
+                        <xsl:choose>
+                            <xsl:when test="@name3 and string-length(@name3) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name2">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name2 and string-length(@name2) > 0">
                                 <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                            </string>
-                        </xsl:when>
-                        <xsl:when test="@name">
-                            <string>
+                            </xsl:when>
+                            <xsl:when test="@name and string-length(@name) > 0">
                                 <xsl:value-of select="@name" />
-                            </string>
-                        </xsl:when>
-                    </xsl:choose>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>Objekt </xsl:text>
+                                <xsl:value-of select="position()" />
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </string>
                 </array>
             </map>
             <array key="items">
