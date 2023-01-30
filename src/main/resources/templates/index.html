@@ -68,22 +68,32 @@
         <script>
             const items = {
                 items:[ {
-                    title: "Inv. 01451 + P.Michael. 52, Köln, Papyrussammlung", link: "NIHZBW7QZS352TCBKRUQPXPO2LGFSFJN", text: "Zwei hochaufgelöste Fotos aus der Papyrussammlung", uuid: "a318e30e-3934-4c6b-94b9-2e2daf8cc3e4"
+                    title: "Inv. 01451 + P.Michael. 52, Köln, Papyrussammlung", link: "NIHZBW7QZS352TCBKRUQPXPO2LGFSFJN", text: "Zwei hochaufgelöste Fotos aus der Papyrussammlung.", uuid: "a318e30e-3934-4c6b-94b9-2e2daf8cc3e4"
                 }, {
-                    title: "Flöte", link: "UT7QCBPP626TE3HTJDMJN7HVJ22IUEEO", text: "Sechs hochaufgelöste Fotos einer Flöte", uuid: "c6f53bd0-2f2a-4f24-a9b3-f7f812135c65"
+                    title: "Flöte", link: "UT7QCBPP626TE3HTJDMJN7HVJ22IUEEO", text: "Sechs hochaufgelöste Fotos einer Flöte.", uuid: "c6f53bd0-2f2a-4f24-a9b3-f7f812135c65"
                 }, {
-                    title: "Träume / von Richard Wagner", link: "7PQO65ASPKENCHEOMMQLLE3INGF5NRYV", text: "Zwei Audiodateien mit Schallplattencover", uuid: "5e8456a1-cf17-4d78-8a17-02bca068ab94"
+                    title: "Träume / von Richard Wagner", link: "7PQO65ASPKENCHEOMMQLLE3INGF5NRYV", text: "Zwei Audiodateien mit Schallplattencover. Die Cover werden in der DDB nicht extra angezeigt und als Platzhalterbild für die Audio-Dateien benutzt.", uuid: "5e8456a1-cf17-4d78-8a17-02bca068ab94"
                 }, {
-                    title: "Julius Neubronner zaubert", link: "UODH7ABRU3KEFW4W3LTX2EYKOD6UKANO", text: "Ein Video", uuid: "937976e0-5072-4f18-9fb0-4c19cf99041d"
+                    title: "Julius Neubronner zaubert", link: "UODH7ABRU3KEFW4W3LTX2EYKOD6UKANO", text: "Ein Video. Das Video hat zusätzlich ein Still, das in den IIIF-Manifesten und im Gegensatz zum DDB-Portal angezeigt wird. Der Universal Viewer benötigt zwingen die Spieldauer eines Videos. Diese Information kann von der DDB nicht zur Verfügung gestellt werden, entsprechend funktioniert die Anzeige von Video/ Audio im Universal-Viewer nicht korrekt.", uuid: "937976e0-5072-4f18-9fb0-4c19cf99041d"
+                }, {
+                    title: "Drehbuch (2. Fassung, Auszug), mit handschriftlichen Korrekturen von Artur Brauner.", status: "warning", link: "D6EKHXZC454ZLGAURLN6T5O7WBEEQRI3", text: "Eine PDF-Datei mit Vorschaubild. PDFs werden aktuell nur vom Universal Viewer unterstützt. Der Mirador 3 Viewer zeigt lediglich eine weiße Seite an.", uuid: "2695e3da-a40a-4a09-b8b1-2f5b23e0f93b"
+                }, {
+                    title: "Vermögensverzeichnis und Übergabe der Eva Herrmann, Witwe des gewesenen Bürgers aus Feudenheim Georg Herrmann, an ihre fünf großjährigen Töchter", link: "LZTFOTG63KTPINGRL6ZNYTU3YBBR5HNT", text: "Eine 24-seitige Archivalie.", uuid: "63af9bfc-66de-4892-a1de-e3e7a9e54bc4"
+                }, {
+                    title: "Rad (2001)", status: "danger", link: "F3WJONMF6NXB3IJQLRYV5LR67KDPMQTA", text: "Vimeo-Videos können in IIIF nicht repräsentiert werden. Entsprechend zeigt keiner der Viewer diese an.", uuid: "70f8f639-6689-41a4-9542-83a866d155ca"
+                }, {
+                    title: "Auriga (1967), Frachtschiff, Argo Reederei Richard Adler & Söhne, Bremen, Bau-Nr. 1140", link: "TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO", text: "Ein hochaufgelöstes Digitalisat aus der Peter Tamm Sen. Stiftung.", uuid: "410f4523-0424-4d38-a692-3f68fda5a5d5"
+                }, {
+                    title: "Der Schimmelreiter oder Unsere Welt vom Ende her denken", link: "QCWBCVL6F64T6PHGAUCIFC57CWUC7YXV", text: "Eine Bild-, eine Video- und sechs Audio-Dateien.", uuid: "b8f008da-77c0-4361-939e-dcb59e53e5f5"
                 }]
             };
             
             const template = ' \
             {{#items}} \
-            <a class="list-group-item d-flex justify-content-between align-items-center" href="https://www.deutsche-digitale-bibliothek.de/item/{{link}}"> \
+            <a class="list-group-item {{#status}}list-group-item-{{status}} {{/status}}d-flex justify-content-between align-items-center" href="https://www.deutsche-digitale-bibliothek.de/item/{{link}}"> \
             <div> \
             <div class="fw-bold">{{title}}</div> \
-            <div class="text-muted small">{{text}}</div> \
+            <div class="text-muted small">https://www.deutsche-digitale-bibliothek.de/item/{{link}}<br>{{text}}</div> \
             </div> \
             <img alt="quixote" class="img-fluid image-parent" src="https://iiif.deutsche-digitale-bibliothek.de/image/2/{{uuid}}/full/!116,87/0/default.jpg"> \
             </a> \
