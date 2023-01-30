@@ -156,6 +156,7 @@
                     e.preventDefault();
                     $('#input').val($(this).attr("href"));
                     valueChanged();
+                    window.scrollTo({top: 0, behavior: 'smooth'});
                 });
             });</script>
     </body>
