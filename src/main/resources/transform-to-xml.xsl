@@ -109,7 +109,7 @@ limitations under the License.
             <!-- thumbnail block -->
             <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true']">
                 <xsl:variable name="thumbId">
-                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true']/@ref" />
+                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true'][1]/@ref" />
                 </xsl:variable>
                 <array key="thumbnail">
                     <map>
