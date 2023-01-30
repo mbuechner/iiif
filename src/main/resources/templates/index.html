@@ -13,6 +13,10 @@
             }
             .form-control::placeholder {
                 color: #ccc;
+            
+            }
+            .image-parent {
+                max-height: 80px;
             }</style>
         <link crossorigin="anonymous" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" referrerpolicy="no-referrer" rel="stylesheet" />
     </head>
@@ -30,8 +34,8 @@
             <div class="row mb-5">
                 <div class="p-1 bg-light rounded shadow-sm mb-4">
                     <div class="input-group">
-                        <button aria-expanded="false" class="btn btn-light dropdown-toggle rounded-start" data-bs-toggle="dropdown" id="displayType" type="button">IIIF Presentation API 3.0 Manifest</button>
-                        <ul class="dropdown-menu dropdown-menu-end" id="displayTypeDropdown">
+                        <button aria-expanded="false" class="btn btn-light dropdown-toggle rounded-start col col-12 col-xl-3 mx-auto" data-bs-toggle="dropdown" id="displayType" type="button">IIIF Presentation API 3.0 Manifest</button>
+                        <ul class="dropdown-menu dropdown-menu-start col col-12 col-xl-3 mx-auto" id="displayTypeDropdown">
                             <li>
                                 <a class="dropdown-item" data-href="">IIIF Presentation API 3.0 Manifest</a>
                             </li>
@@ -45,15 +49,46 @@
                                 <a class="dropdown-item" data-href="https://presentation-validator.iiif.io/validate?version=3.0&amp;url=">Presentation API Validator</a>
                             </li>
                         </ul>
-                        <input aria-label="Text input with dropdown button" class="form-control border-0" id="input" placeholder="https://www.deutsche-digitale-bibliothek.de/item/CRHMM44XWLG7ZNH55BQ5GSAHTYLXJ7Z4" type="text">
-                        <a class="btn bg-light rounded-end disabled" data-href="" href="#" id="los" role="button" target="_blank">Los!</a>
+                        <input aria-label="Text input with dropdown button" class="form-control col col-12 col-xl-8 mx-auto" id="input" placeholder="https://www.deutsche-digitale-bibliothek.de/item/CRHMM44XWLG7ZNH55BQ5GSAHTYLXJ7Z4" type="text">
+                        <a class="btn bg-light rounded-end disabled col col-12 col-xl-1 mx-auto" data-href="" href="#" id="los" role="button" target="_blank">Los!</a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 col-xl-8 mx-auto">
+                    <div class="list-group">
+                        <div id="mylistgroupitems"></div>
                     </div>
                 </div>
             </div>
         </div>
         <script crossorigin="anonymous" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
         <script crossorigin="anonymous" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script crossorigin="anonymous" integrity="sha512-HYiNpwSxYuji84SQbCU5m9kHEsRqwWypXgJMBtbRSumlx1iBB6QaxgEBZHSHEGM+fKyCX/3Kb5V5jeVXm0OglQ==" src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/4.1.0/mustache.min.js"></script>
         <script>
+            const items = {
+                items:[ {
+                    title: "Inv. 01451 + P.Michael. 52, Köln, Papyrussammlung", link: "NIHZBW7QZS352TCBKRUQPXPO2LGFSFJN", text: "Zwei hochaufgelöste Fotos aus der Papyrussammlung", uuid: "a318e30e-3934-4c6b-94b9-2e2daf8cc3e4"
+                }, {
+                    title: "Flöte", link: "UT7QCBPP626TE3HTJDMJN7HVJ22IUEEO", text: "Sechs hochaufgelöste Fotos einer Flöte", uuid: "c6f53bd0-2f2a-4f24-a9b3-f7f812135c65"
+                }, {
+                    title: "Träume / von Richard Wagner", link: "7PQO65ASPKENCHEOMMQLLE3INGF5NRYV", text: "Zwei Audiodateien mit Schallplattencover", uuid: "5e8456a1-cf17-4d78-8a17-02bca068ab94"
+                }, {
+                    title: "Julius Neubronner zaubert", link: "UODH7ABRU3KEFW4W3LTX2EYKOD6UKANO", text: "Ein Video", uuid: "937976e0-5072-4f18-9fb0-4c19cf99041d"
+                }]
+            };
+            
+            const template = ' \
+            {{#items}} \
+            <a class="list-group-item d-flex justify-content-between align-items-center" href="https://www.deutsche-digitale-bibliothek.de/item/{{link}}"> \
+            <div> \
+            <div class="fw-bold">{{title}}</div> \
+            <div class="text-muted small">{{text}}</div> \
+            </div> \
+            <img alt="quixote" class="img-fluid image-parent" src="https://iiif.deutsche-digitale-bibliothek.de/image/2/{{uuid}}/full/!116,87/0/default.jpg"> \
+            </a> \
+            {{/items}}';
+            
             $(document).ready(function () {
                 function valueChanged() {
                     const url = window.location.href.endsWith("/") ? window.location.href: window.location.href + "/";
@@ -72,6 +107,22 @@
                         $("#los").addClass("disabled");
                     }
                 }
+                // see https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
+                function shuffle(array) {
+                    let currentIndex = array[ 'items'].length, randomIndex;
+                    // While there remain elements to shuffle.
+                    while (currentIndex != 0) {
+                        // Pick a remaining element.
+                        randomIndex = Math.floor(Math.random() * currentIndex);
+                        currentIndex--;
+                        // And swap it with the current element.
+                        [array[ 'items'][currentIndex], array[ 'items'][randomIndex]] =[
+                        array[ 'items'][randomIndex], array[ 'items'][currentIndex]];
+                    }
+                    return array;
+                }
+                
+                $("#mylistgroupitems").html(Mustache.render(template, shuffle(items)));
                 
                 $(".dropdown-menu li a").click(function () {
                     $(".btn:first-child").text($(this).text());
@@ -88,6 +139,12 @@
                     if (e.which === 13 && ! $("#los").hasClass("disabled")) {
                         window.open($("#los").attr("href"), '_blank');
                     }
+                });
+                
+                $('.list-group-item').click(function (e) {
+                    e.preventDefault();
+                    $('#input').val($(this).attr("href"));
+                    valueChanged();
                 });
             });</script>
     </body>
