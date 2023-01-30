@@ -107,9 +107,9 @@ limitations under the License.
                 </map>
             </xsl:if>
             <!-- thumbnail block -->
-            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true']">
+            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and (@minetype='video/mp4' or @mimetype='image/jpeg')]">
                 <xsl:variable name="thumbId">
-                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true'][1]/@ref" />
+                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and (@minetype='video/mp4' or @mimetype='image/jpeg')][1]/@ref" />
                 </xsl:variable>
                 <array key="thumbnail">
                     <map>
