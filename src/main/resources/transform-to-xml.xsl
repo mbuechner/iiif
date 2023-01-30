@@ -563,7 +563,6 @@ limitations under the License.
                                 <xsl:value-of select="$uri" />
                                 <xsl:text>/canvas/p</xsl:text>
                                 <xsl:value-of select="position()" />
-                                <xsl:text>/1</xsl:text>
                             </string>
                         </map>
                     </array>
@@ -683,7 +682,6 @@ limitations under the License.
                                 <xsl:value-of select="$uri" />
                                 <xsl:text>/canvas/p</xsl:text>
                                 <xsl:value-of select="position()" />
-                                <xsl:text>/1</xsl:text>
                             </string>
                         </map>
                     </array>
@@ -781,7 +779,6 @@ limitations under the License.
                                 <xsl:value-of select="$uri" />
                                 <xsl:text>/canvas/p</xsl:text>
                                 <xsl:value-of select="position()" />
-                                <xsl:text>/1</xsl:text>
                             </string>
                         </map>
                     </array>
@@ -875,7 +872,6 @@ limitations under the License.
                                 <xsl:value-of select="$uri" />
                                 <xsl:text>/canvas/p</xsl:text>
                                 <xsl:value-of select="position()" />
-                                <xsl:text>/1</xsl:text>
                             </string>
                         </map>
                     </array>
