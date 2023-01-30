@@ -157,14 +157,14 @@ limitations under the License.
                     <array key="none">
                         <string>
                             <xsl:choose>
-                                <xsl:when test="cortex:cortex/cortex:view/ns4:item/ns4:origin">
+                                <xsl:when test="cortex:cortex/cortex:view/ns4:item/ns4:origin and string-length(cortex:cortex/cortex:view/ns4:item/ns4:origin) > 0">
                                     <xsl:text>&lt;a href="</xsl:text>
                                     <xsl:value-of select="cortex:cortex/cortex:view/ns4:item/ns4:origin" />
                                     <xsl:text>" target="_blank"&gt;</xsl:text>
                                     <xsl:value-of select="/cortex:cortex/cortex:view/ns4:item/ns4:institution/ns4:name" />
                                     <xsl:text>&lt;/a&gt;</xsl:text>
                                 </xsl:when>
-                                <xsl:when test="/cortex:cortex/cortex:provider-info/cortex:provider-uri">
+                                <xsl:when test="/cortex:cortex/cortex:provider-info/cortex:provider-uri and string-length(/cortex:cortex/cortex:provider-info/cortex:provider-uri) > 0">
                                     <xsl:text>&lt;a href="</xsl:text>
                                     <xsl:value-of select="/cortex:cortex/cortex:provider-info/cortex:provider-uri" />
                                     <xsl:text>" target="_blank"&gt;</xsl:text>
