@@ -500,7 +500,9 @@ limitations under the License.
                         <map>
                             <string key="id">
                                 <xsl:value-of select="$uri" />
-                                <xsl:text>/annotation/p0001-image</xsl:text>
+                                <xsl:text>/annotation/p000</xsl:text>
+                                <xsl:value-of select="position()" />
+                                <xsl:text>-image</xsl:text>
                             </string>
                             <string key="type">Annotation</string>
                             <string key="motivation">painting</string>
@@ -635,7 +637,9 @@ limitations under the License.
                         <map>
                             <string key="id">
                                 <xsl:value-of select="$uri" />
-                                <xsl:text>/annotation/p0001-document</xsl:text>
+                                <xsl:text>/annotation/p000</xsl:text>
+                                <xsl:value-of select="position()" />
+                                <xsl:text>-document</xsl:text>
                             </string>
                             <string key="type">Annotation</string>
                             <string key="motivation">painting</string>
@@ -758,7 +762,9 @@ limitations under the License.
                         <map>
                             <string key="id">
                                 <xsl:value-of select="$uri" />
-                                <xsl:text>/annotation/p0001-image</xsl:text>
+                                <xsl:text>/annotation/p000</xsl:text>
+                                <xsl:value-of select="position()" />
+                                <xsl:text>-image</xsl:text>
                             </string>
                             <string key="type">Annotation</string>
                             <string key="motivation">painting</string>
@@ -854,7 +860,9 @@ limitations under the License.
                         <map>
                             <string key="id">
                                 <xsl:value-of select="$uri" />
-                                <xsl:text>/annotation/p0001-image</xsl:text>
+                                <xsl:text>/annotation/p000</xsl:text>
+                                <xsl:value-of select="position()" />
+                                <xsl:text>-image</xsl:text>
                             </string>
                             <string key="type">Annotation</string>
                             <string key="motivation">painting</string>
