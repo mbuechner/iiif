@@ -107,9 +107,9 @@ limitations under the License.
                 </map>
             </xsl:if>
             <!-- thumbnail block -->
-            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and (@minetype='video/mp4' or @mimetype='image/jpeg')]">
+            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and (@minetype = 'video/mp4' or @mimetype = 'image/jpeg')]">
                 <xsl:variable name="thumbId">
-                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and (@minetype='video/mp4' or @mimetype='image/jpeg')][1]/@ref" />
+                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and (@minetype = 'video/mp4' or @mimetype = 'image/jpeg')][1]/@ref" />
                 </xsl:variable>
                 <array key="thumbnail">
                     <map>
@@ -322,26 +322,49 @@ limitations under the License.
                 }
             ],
             -->
-            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
-                <array key="rendering">
-                    <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
-                        <map>
-                            <string key="id">
-                                <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
-                                <xsl:value-of select="@ref" />
-                                <xsl:text>.pdf</xsl:text>
-                            </string>
-                            <string key="type">Text</string>
-                            <map key="label">
-                                <array key="de">
-                                    <string>PDF-Ansicht</string>
-                                </array>
+            <xsl:choose>
+                <!-- PDF -->
+                <xsl:when test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
+                    <array key="rendering">
+                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
+                            <map>
+                                <string key="id">
+                                    <xsl:text>https://api.deutsche-digitale-bibliothek.de/binary/</xsl:text>
+                                    <xsl:value-of select="@ref" />
+                                    <xsl:text>.pdf</xsl:text>
+                                </string>
+                                <string key="type">Text</string>
+                                <map key="label">
+                                    <array key="de">
+                                        <string>PDF-Ansicht</string>
+                                    </array>
+                                </map>
+                                <string key="format">application/pdf</string>
                             </map>
-                            <string key="format">application/pdf</string>
-                        </map>
-                    </xsl:for-each>
-                </array>
-            </xsl:if>
+                        </xsl:for-each>
+                    </array>
+                </xsl:when>
+                <!-- Vimeo-Video -->
+                <xsl:when test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'video/vnd.ddbkultur.vimeo']">
+                    <array key="rendering">
+                        <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'video/vnd.ddbkultur.vimeo']">
+                            <map>
+                                <string key="id">
+                                    <xsl:text>https://vimeo.com/</xsl:text>
+                                    <xsl:value-of select="@ref" />
+                                </string>
+                                <string key="type">Video</string>
+                                <map key="label">
+                                    <array key="de">
+                                        <string>Vimeo-Video</string>
+                                    </array>
+                                </map>
+                                <string key="format">video/vnd.ddbkultur.vimeo</string>
+                            </map>
+                        </xsl:for-each>
+                    </array>
+                </xsl:when>
+            </xsl:choose>
             <!-- start (canvas) -->
             <map key="start">
                 <string key="id">
