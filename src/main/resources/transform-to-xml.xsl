@@ -745,9 +745,10 @@ limitations under the License.
                     </string>
                 </array>
             </map>
-            <number key="height">360</number>
-            <number key="width">480</number>
-            <number key="duration">321.0</number>
+            <!-- we don't know the duration, resolution etc. and we'll never know -->
+            <!-- <number key="height">360</number> -->
+            <!-- <number key="width">480</number> -->
+            <!-- <number key="duration">321.0</number> -->
             <array key="items">
                 <map>
                     <string key="id">
@@ -764,7 +765,7 @@ limitations under the License.
                                 <xsl:value-of select="$uri" />
                                 <xsl:text>/annotation/p000</xsl:text>
                                 <xsl:value-of select="position()" />
-                                <xsl:text>-image</xsl:text>
+                                <xsl:text>-video</xsl:text>
                             </string>
                             <string key="type">Annotation</string>
                             <string key="motivation">painting</string>
@@ -775,10 +776,10 @@ limitations under the License.
                                     <xsl:text>.mp4</xsl:text>
                                 </string>
                                 <string key="type">Video</string>
-                                <number key="height">360</number>
-                                <number key="width">480</number>
-                                <!-- we don't know the duration and we'll never know -->
-                                <number key="duration">321.0</number>
+                                <!-- we don't know the duration, resolution etc. and we'll never know -->
+                                <!-- <number key="height">360</number> -->
+                                <!-- <number key="width">480</number> -->
+                                <!-- <number key="duration">321.0</number> -->
                                 <string key="format">video/mp4</string>
                             </map>
                             <string key="target">
@@ -790,13 +791,13 @@ limitations under the License.
                     </array>
                 </map>
             </array>
-            <!-- thumbnail, because every video does have an thumbnail -->
-            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and @mimetype = 'image/jpeg']/@ref">
+            <!-- thumbnail, because every video does have a thumbnail -->
+            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@position = current()/@position and @mimetype = 'image/jpeg']/@ref">
                 <array key="thumbnail">
                     <map>
                         <string key="id">
                             <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                            <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and @mimetype = 'image/jpeg']/@ref" />
+                            <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@position = current()/@position and @mimetype = 'image/jpeg']/@ref" />
                             <xsl:text>/full/full/0/default.jpg</xsl:text>
                         </string>
                         <string key="type">Image</string>
@@ -805,7 +806,7 @@ limitations under the License.
                             <map>
                                 <string key="id">
                                     <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@primary = 'true' and @mimetype = 'image/jpeg']/@ref" />
+                                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@position = current()/@position and @mimetype = 'image/jpeg']/@ref" />
                                 </string>
                                 <string key="type">ImageService2</string>
                                 <string key="profile">level2</string>
@@ -862,7 +863,7 @@ limitations under the License.
                                 <xsl:value-of select="$uri" />
                                 <xsl:text>/annotation/p000</xsl:text>
                                 <xsl:value-of select="position()" />
-                                <xsl:text>-image</xsl:text>
+                                <xsl:text>-sound</xsl:text>
                             </string>
                             <string key="type">Annotation</string>
                             <string key="motivation">painting</string>
@@ -885,6 +886,30 @@ limitations under the License.
                     </array>
                 </map>
             </array>
+            <!-- thumbnail, because audio may have a thumbnail -->
+            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@position = current()/@position and @mimetype = 'image/jpeg']/@ref">
+                <array key="thumbnail">
+                    <map>
+                        <string key="id">
+                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                            <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@position = current()/@position and @mimetype = 'image/jpeg']/@ref" />
+                            <xsl:text>/full/full/0/default.jpg</xsl:text>
+                        </string>
+                        <string key="type">Image</string>
+                        <string key="format">image/jpeg</string>
+                        <array key="service">
+                            <map>
+                                <string key="id">
+                                    <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                    <xsl:value-of select="/cortex:cortex/cortex:binaries/cortex:binary[@position = current()/@position and @mimetype = 'image/jpeg']/@ref" />
+                                </string>
+                                <string key="type">ImageService2</string>
+                                <string key="profile">level2</string>
+                            </map>
+                        </array>
+                    </map>
+                </array>
+            </xsl:if>
         </map>
     </xsl:template>
     <!-- default template -->
