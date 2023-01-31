@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<xsl:stylesheet exclude-result-prefixes="cortex ns3 ns4" version="3.0" xmlns="http://www.w3.org/2005/xpath-functions" xmlns:cortex="http://www.deutsche-digitale-bibliothek.de/cortex" xmlns:ns3="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:ns4="http://www.deutsche-digitale-bibliothek.de/item" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:stylesheet exclude-result-prefixes="cortex ns3 ns4 source ns5" version="3.0" xmlns="http://www.w3.org/2005/xpath-functions" xmlns:cortex="http://www.deutsche-digitale-bibliothek.de/cortex" xmlns:ns3="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:ns4="http://www.deutsche-digitale-bibliothek.de/item" xmlns:ns5="http://www.deutsche-digitale-bibliothek.de/ns/cortex-item-source-description" xmlns:source="http://www.deutsche-digitale-bibliothek.de/ns/cortex-item-source" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:output encoding="UTF-8" method="xml" />
     <!-- uri of this record -->
     <xsl:param name="uri">https://labs.deutsche-digitale-bibliothek.de/iiif/presentation/3/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345</xsl:param>
@@ -322,10 +322,10 @@ limitations under the License.
                 }
             ],
             -->
-            <xsl:choose>
-                <!-- PDF -->
-                <xsl:when test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
-                    <array key="rendering">
+            <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf'] or /cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'video/vnd.ddbkultur.vimeo'] or /cortex:cortex/source:source/source:description/ns5:record/ns5:id[@type = 'mets:div/@ID']/@value">
+                <array key="rendering">
+                    <!-- PDF -->
+                    <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
                         <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
                             <map>
                                 <string key="id">
@@ -342,11 +342,9 @@ limitations under the License.
                                 <string key="format">application/pdf</string>
                             </map>
                         </xsl:for-each>
-                    </array>
-                </xsl:when>
-                <!-- Vimeo-Video -->
-                <xsl:when test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'video/vnd.ddbkultur.vimeo']">
-                    <array key="rendering">
+                    </xsl:if>
+                    <!-- Vimeo-Video -->
+                    <xsl:if test="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'video/vnd.ddbkultur.vimeo']">
                         <xsl:for-each select="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'video/vnd.ddbkultur.vimeo']">
                             <map>
                                 <string key="id">
@@ -362,9 +360,27 @@ limitations under the License.
                                 <string key="format">video/vnd.ddbkultur.vimeo</string>
                             </map>
                         </xsl:for-each>
-                    </array>
-                </xsl:when>
-            </xsl:choose>
+                    </xsl:if>
+                    <!-- DFG-Viewer -->
+                    <xsl:if test="/cortex:cortex/source:source/source:description/ns5:record/ns5:id[@type = 'mets:div/@ID']/@value">
+                        <map>
+                            <string key="id">
+                                <xsl:text>https://viewer.deutsche-digitale-bibliothek.de/index.php?id=1&amp;tx_dlf[id]=https%3A%2F%2Fapi.deutsche-digitale-bibliothek.de%2Fitems%2F</xsl:text>
+                                <xsl:value-of select="/cortex:cortex/source:source/source:description/ns5:record/@ref" />
+                                <xsl:text>%2Fsource%2Frecord&amp;tx_dlf[page]=</xsl:text>
+                                <xsl:value-of select="/cortex:cortex/source:source/source:description/ns5:record/ns5:id[@type = 'mets:div/@ID']/@value" />
+                            </string>
+                            <string key="type">Text</string>
+                            <map key="label">
+                                <array key="de">
+                                    <string>DDB-Viewer</string>
+                                </array>
+                            </map>
+                            <string key="format">text/html</string>
+                        </map>
+                    </xsl:if>
+                </array>
+            </xsl:if>
             <!-- start (canvas) -->
             <map key="start">
                 <string key="id">
