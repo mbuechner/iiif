@@ -212,7 +212,7 @@ limitations under the License.
                             <string key="format">text/html</string>
                         </map>
                     </array>
-                    <xsl:if test="$providerLogo != ''">
+                    <xsl:if test="not($providerLogo = '')">
                         <array key="logo">
                             <map>
                                 <string key="id">
@@ -273,7 +273,7 @@ limitations under the License.
             </array>
             <!-- logo -->
             <!-- TODO: logo at this position is not IIIF Presentation v3 valid, but Mirador 3 will display a logo (which is nice) -->
-            <xsl:if test="$providerLogo">
+            <xsl:if test="not($providerLogo = '')">
                 <array key="logo">
                     <map>
                         <string key="id">
