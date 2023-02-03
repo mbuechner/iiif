@@ -21,10 +21,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 @RequestMapping({"/", "/index.html"})
-class IiifController {
+class IiifIndexController {
 
     @GetMapping
-    public String main() {
+    public String index() {
         return "index";
     }
 }
