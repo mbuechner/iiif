@@ -460,155 +460,158 @@ limitations under the License.
     </xsl:template>
     <!-- template for images -->
     <xsl:template match="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'image/jpeg']">
-        <xsl:variable name="infoJsonUrl">
-            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-            <xsl:value-of select="@ref" />
-            <xsl:text>/info.json</xsl:text>
-        </xsl:variable>
-        <xsl:variable as="map(*)" name="infoJson" select="json-doc($infoJsonUrl)" />
-        <xsl:variable name="imageWidth" select="$infoJson?width" />
-        <xsl:variable name="imageHeight" select="$infoJson?height" />
-        <map>
-            <string key="id">
-                <xsl:value-of select="$uri" />
-                <xsl:text>/canvas/p</xsl:text>
-                <xsl:value-of select="position()" />
-            </string>
-            <string key="type">Canvas</string>
-            <map key="label">
-                <array key="de">
-                    <string>
-                        <xsl:choose>
-                            <xsl:when test="@name3 and string-length(@name3) > 0">
-                                <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                            </xsl:when>
-                            <xsl:when test="@name2 and string-length(@name2) > 0">
-                                <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                            </xsl:when>
-                            <xsl:when test="@name and string-length(@name) > 0">
-                                <xsl:value-of select="@name" />
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:text>Digitalisat </xsl:text>
-                                <xsl:value-of select="position()" />
-                            </xsl:otherwise>
-                        </xsl:choose>
-                    </string>
+        <xsl:try>
+            <xsl:variable name="infoJsonUrl">
+                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                <xsl:value-of select="@ref" />
+                <xsl:text>/info.json</xsl:text>
+            </xsl:variable>
+            <xsl:variable as="map(*)" name="infoJson" select="json-doc($infoJsonUrl)" />
+            <xsl:variable name="imageWidth" select="$infoJson?width" />
+            <xsl:variable name="imageHeight" select="$infoJson?height" />
+            <map>
+                <string key="id">
+                    <xsl:value-of select="$uri" />
+                    <xsl:text>/canvas/p</xsl:text>
+                    <xsl:value-of select="position()" />
+                </string>
+                <string key="type">Canvas</string>
+                <map key="label">
+                    <array key="de">
+                        <string>
+                            <xsl:choose>
+                                <xsl:when test="@name3 and string-length(@name3) > 0">
+                                    <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                                </xsl:when>
+                                <xsl:when test="@name2 and string-length(@name2) > 0">
+                                    <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                                </xsl:when>
+                                <xsl:when test="@name and string-length(@name) > 0">
+                                    <xsl:value-of select="@name" />
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:text>Digitalisat </xsl:text>
+                                    <xsl:value-of select="position()" />
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </string>
+                    </array>
+                </map>
+                <number key="height">
+                    <xsl:value-of select="$imageHeight" />
+                </number>
+                <number key="width">
+                    <xsl:value-of select="$imageWidth" />
+                </number>
+                <array key="items">
+                    <map>
+                        <string key="id">
+                            <xsl:value-of select="$uri" />
+                            <xsl:text>/canvas/p</xsl:text>
+                            <xsl:value-of select="position()" />
+                            <xsl:text>/1</xsl:text>
+                        </string>
+                        <string key="type">AnnotationPage</string>
+                        <array key="items">
+                            <!-- images and pdf (pdf always have a preview image) -->
+                            <map>
+                                <string key="id">
+                                    <xsl:value-of select="$uri" />
+                                    <xsl:text>/annotation/p000</xsl:text>
+                                    <xsl:value-of select="position()" />
+                                    <xsl:text>-image</xsl:text>
+                                </string>
+                                <string key="type">Annotation</string>
+                                <string key="motivation">painting</string>
+                                <map key="body">
+                                    <string key="id">
+                                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                        <xsl:value-of select="@ref" />
+                                        <xsl:text>/full/full/0/default.jpg</xsl:text>
+                                    </string>
+                                    <string key="type">Image</string>
+                                    <string key="format">image/jpeg</string>
+                                    <array key="service">
+                                        <map>
+                                            <string key="id">
+                                                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                                                <xsl:value-of select="@ref" />
+                                            </string>
+                                            <string key="type">ImageService2</string>
+                                            <string key="profile">level2</string>
+                                        </map>
+                                    </array>
+                                    <number key="height">
+                                        <xsl:value-of select="$imageHeight" />
+                                    </number>
+                                    <number key="width">
+                                        <xsl:value-of select="$imageWidth" />
+                                    </number>
+                                    <array key="metadata">
+                                        <map>
+                                            <map key="label">
+                                                <array key="de">
+                                                    <string>Beschreibung</string>
+                                                </array>
+                                            </map>
+                                            <map key="value">
+                                                <array key="de">
+                                                    <string>
+                                                        <xsl:choose>
+                                                            <xsl:when test="@name3 and string-length(@name3) > 0">
+                                                                <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
+                                                            </xsl:when>
+                                                            <xsl:when test="@name2 and string-length(@name2) > 0">
+                                                                <xsl:value-of select="concat(@name, ' | ', @name2)" />
+                                                            </xsl:when>
+                                                            <xsl:when test="@name and string-length(@name) > 0">
+                                                                <xsl:value-of select="@name" />
+                                                            </xsl:when>
+                                                            <xsl:otherwise>
+                                                                <xsl:text>Digitalisat </xsl:text>
+                                                                <xsl:value-of select="position()" />
+                                                            </xsl:otherwise>
+                                                        </xsl:choose>
+                                                    </string>
+                                                </array>
+                                            </map>
+                                        </map>
+                                    </array>
+                                </map>
+                                <string key="target">
+                                    <xsl:value-of select="$uri" />
+                                    <xsl:text>/canvas/p</xsl:text>
+                                    <xsl:value-of select="position()" />
+                                </string>
+                            </map>
+                        </array>
+                    </map>
                 </array>
-            </map>
-            <number key="height">
-                <xsl:value-of select="$imageHeight" />
-            </number>
-            <number key="width">
-                <xsl:value-of select="$imageWidth" />
-            </number>
-            <array key="items">
-                <map>
-                    <string key="id">
-                        <xsl:value-of select="$uri" />
-                        <xsl:text>/canvas/p</xsl:text>
-                        <xsl:value-of select="position()" />
-                        <xsl:text>/1</xsl:text>
-                    </string>
-                    <string key="type">AnnotationPage</string>
-                    <array key="items">
-                        <!-- images and pdf (pdf always have a preview image) -->
-                        <map>
-                            <string key="id">
-                                <xsl:value-of select="$uri" />
-                                <xsl:text>/annotation/p000</xsl:text>
-                                <xsl:value-of select="position()" />
-                                <xsl:text>-image</xsl:text>
-                            </string>
-                            <string key="type">Annotation</string>
-                            <string key="motivation">painting</string>
-                            <map key="body">
+                <!-- thumbnail -->
+                <array key="thumbnail">
+                    <map>
+                        <string key="id">
+                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
+                            <xsl:value-of select="@ref" />
+                            <xsl:text>/full/full/0/default.jpg</xsl:text>
+                        </string>
+                        <string key="type">Image</string>
+                        <string key="format">image/jpeg</string>
+                        <array key="service">
+                            <map>
                                 <string key="id">
                                     <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
                                     <xsl:value-of select="@ref" />
-                                    <xsl:text>/full/full/0/default.jpg</xsl:text>
                                 </string>
-                                <string key="type">Image</string>
-                                <string key="format">image/jpeg</string>
-                                <array key="service">
-                                    <map>
-                                        <string key="id">
-                                            <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                            <xsl:value-of select="@ref" />
-                                        </string>
-                                        <string key="type">ImageService2</string>
-                                        <string key="profile">level2</string>
-                                    </map>
-                                </array>
-                                <number key="height">
-                                    <xsl:value-of select="$imageHeight" />
-                                </number>
-                                <number key="width">
-                                    <xsl:value-of select="$imageWidth" />
-                                </number>
-                                <array key="metadata">
-                                    <map>
-                                        <map key="label">
-                                            <array key="de">
-                                                <string>Beschreibung</string>
-                                            </array>
-                                        </map>
-                                        <map key="value">
-                                            <array key="de">
-                                                <string>
-                                                    <xsl:choose>
-                                                        <xsl:when test="@name3 and string-length(@name3) > 0">
-                                                            <xsl:value-of select="concat(@name, ' | ', @name2, ' | ', @name3)" />
-                                                        </xsl:when>
-                                                        <xsl:when test="@name2 and string-length(@name2) > 0">
-                                                            <xsl:value-of select="concat(@name, ' | ', @name2)" />
-                                                        </xsl:when>
-                                                        <xsl:when test="@name and string-length(@name) > 0">
-                                                            <xsl:value-of select="@name" />
-                                                        </xsl:when>
-                                                        <xsl:otherwise>
-                                                            <xsl:text>Digitalisat </xsl:text>
-                                                            <xsl:value-of select="position()" />
-                                                        </xsl:otherwise>
-                                                    </xsl:choose>
-                                                </string>
-                                            </array>
-                                        </map>
-                                    </map>
-                                </array>
+                                <string key="type">ImageService2</string>
+                                <string key="profile">level2</string>
                             </map>
-                            <string key="target">
-                                <xsl:value-of select="$uri" />
-                                <xsl:text>/canvas/p</xsl:text>
-                                <xsl:value-of select="position()" />
-                            </string>
-                        </map>
-                    </array>
-                </map>
-            </array>
-            <!-- thumbnail -->
-            <array key="thumbnail">
-                <map>
-                    <string key="id">
-                        <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                        <xsl:value-of select="@ref" />
-                        <xsl:text>/full/full/0/default.jpg</xsl:text>
-                    </string>
-                    <string key="type">Image</string>
-                    <string key="format">image/jpeg</string>
-                    <array key="service">
-                        <map>
-                            <string key="id">
-                                <xsl:text>https://iiif.deutsche-digitale-bibliothek.de/image/2/</xsl:text>
-                                <xsl:value-of select="@ref" />
-                            </string>
-                            <string key="type">ImageService2</string>
-                            <string key="profile">level2</string>
-                        </map>
-                    </array>
-                </map>
-            </array>
-        </map>
+                        </array>
+                    </map>
+                </array>
+            </map>
+            <xsl:catch errors="*" />
+        </xsl:try>
     </xsl:template>
     <!-- template for pdf -->
     <xsl:template match="/cortex:cortex/cortex:binaries/cortex:binary[@mimetype = 'application/pdf']">
@@ -707,7 +710,7 @@ limitations under the License.
                     </array>
                 </map>
             </array>
-            <!-- thumbnail, because every PDF does have an thumbnail -->
+            <!-- thumbnail, because every PDF does have a thumbnail -->
             <array key="thumbnail">
                 <map>
                     <string key="id">
