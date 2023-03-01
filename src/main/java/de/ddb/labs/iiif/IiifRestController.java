@@ -47,6 +47,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -55,7 +56,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 class IiifRestController {
 
-    private final static String DDB_API = "https://api.deutsche-digitale-bibliothek.de/items/";
+    private final static String DDB_API_PROD = "https://api.deutsche-digitale-bibliothek.de/items/";
+    private final static String DDB_API_Q1 = "https://api-q1.deutsche-digitale-bibliothek.de/items/";
+    private final static String DDB_API_Q2 = "https://api-q1.deutsche-digitale-bibliothek.de/items/";
     private final static String API_KEY = "?oauth_consumer_key=";
     private final OkHttpClient httpClient;
     private final TransformerFactory factory;
@@ -63,8 +66,14 @@ class IiifRestController {
     @Value("${iiif.baseurl}")
     private String baseUrl;
 
-    @Value("${iiif.ddb_api_key}")
-    private String ddbApiKey;
+    @Value("${iiif.ddb_api_key_prod}")
+    private String ddbApiKeyProd;
+
+    @Value("${iiif.ddb_api_key_q1}")
+    private String ddbApiKeyQ1;
+
+    @Value("${iiif.ddb_api_key_q2}")
+    private String ddbApiKeyQ2;
 
     @Value("classpath:transform-to-xml.xsl")
     private Resource transformToXml;
@@ -103,10 +112,20 @@ class IiifRestController {
             value = "/{id}"
     )
     @ResponseBody
-    public ResponseEntity<String> getResource(HttpServletRequest request, @PathVariable String id) throws FileNotFoundException, IOException, TransformerConfigurationException, TransformerException {
+    public ResponseEntity<String> getResource(HttpServletRequest request, @PathVariable String id, @RequestParam(value = "system", required = false) String system) throws FileNotFoundException, IOException, TransformerConfigurationException, TransformerException {
+
+        String requestUrl;
+
+        if (system != null && system.equalsIgnoreCase("Q1")) {
+            requestUrl = DDB_API_Q1 + id + API_KEY + ddbApiKeyQ1;
+        } else if (system != null && system.equalsIgnoreCase("Q2")) {
+            requestUrl = DDB_API_Q2 + id + API_KEY + ddbApiKeyQ2;
+        } else {
+            requestUrl = DDB_API_PROD + id + API_KEY + ddbApiKeyProd;
+        }
 
         final Request getRequest = new Request.Builder()
-                .url(DDB_API + id + API_KEY + ddbApiKey)
+                .url(requestUrl)
                 .addHeader("Accept", "application/xml")
                 .get()
                 .build();
@@ -120,7 +139,7 @@ class IiifRestController {
                 final StreamResult result = new StreamResult(writer);
 
                 final Transformer transformer01 = templates01.newTransformer();
-                transformer01.setParameter("uri", baseUrl + request.getRequestURI());
+                transformer01.setParameter("uri", baseUrl + request.getRequestURI() + (request.getQueryString().isBlank() ? "" : "?" + request.getQueryString()));
 
                 final TransformerHandler transformer02 = ((SAXTransformerFactory) factory).newTransformerHandler(templates02);
                 transformer02.setResult(result);

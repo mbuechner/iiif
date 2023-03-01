@@ -80,7 +80,7 @@
                     "title": "Symphonie Nr. 5 c-Moll Op. 67 ",
                     "status": "warning",
                     "link": "SDD2UHI6DHFQT6MOWQBQEWJRECTUCWGW",
-                    "uuid": "308576c2-5c3b-4df5-b590-1a9b950f9a5e",
+                    "uuid": "ec6bbc6f-cad3-425b-83d2-5132bb7b9841",
                     "text": "Beethovens 5. in vier Audiodateien. Leider spielt der Universal Viewer die Audio-Daten nicht ab, weil das Manifest die „duration“ nicht enthält. Diese Information wird aktuell nicht in der DDB gespeichert."
                 }, {
                     
@@ -94,7 +94,7 @@
                     "title": "Rathaus, Bonn-Poppelsdorf. Monatskonkurrenz Juli 1894: Aufriss Straßenansicht (Kirschenallee) 1:150; Maßstabsleiste",
                     "status": "",
                     "link": "TLCKVDW6HU7KHWM6I4VIE3VZ7R2XPXIY",
-                    "uuid": "baee6960-184e-47b3-b2bf-8d9b60e9e2c1",
+                    "uuid": "db40f60b-6f77-48de-93f6-91a7c8e3d007",
                     "text": "Ein Museumsobjekt einer langen Bildunterschrift unter einem hochaufgelösten Digtalisat."
                 }, {
                     
@@ -115,7 +115,7 @@
                     "title": "Berliner Volksblatt ",
                     "status": "",
                     "link": "IGBWWKK6ACCZAM5SMI34F6GEQO5RNXUG",
-                    "uuid": "5ba11d48-99f8-46dd-9945-6b5c8cbadff7",
+                    "uuid": "5575c301-8c6d-4b5d-96d4-adb8e205d737",
                     "text": "Zeitung"
                 }, {
                     
@@ -150,7 +150,7 @@
                     "title": "Dance song, Fieldrecording Yunnan, China 2018",
                     "status": "",
                     "link": "XXJ7DRMCMYAO6UY434KUHQLEQ23W6MF7",
-                    "uuid": "4cf0ded7-717b-48f7-bb57-e22566647353",
+                    "uuid": "343a6935-48b1-49e0-899c-9af9cbca8f6c",
                     "text": "Ein Video"
                 }, {
                     
@@ -245,13 +245,6 @@
                     "text": "Monographie"
                 }, {
                     
-                    "title": "Berliner Volksblatt",
-                    "status": "",
-                    "link": "IGBWWKK6ACCZAM5SMI34F6GEQO5RNXUG",
-                    "uuid": "5ba11d48-99f8-46dd-9945-6b5c8cbadff7",
-                    "text": "Zeitung"
-                }, {
-                    
                     "title": "Ein Trinkspruch des Bruders Eberhard auf das Vaterland bei der Tafelloge. am 20.1.1921.",
                     "status": "",
                     "link": "C4OICKVZCLE3E2HVAQGEVKK6MOGJOLKV",
@@ -289,15 +282,22 @@
                 function valueChanged() {
                     const url = window.location.href.endsWith("/") ? window.location.href: window.location.href + "/";
                     const string = $("#input").val();
-                    const regexp = new RegExp("https:\/\/www\.deutsche-digitale-bibliothek\.de\/item\/([ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]{32})", "g");
+                    const regexp = new RegExp("^https:\/\/www(-[Qq][12])?\.deutsche-digitale-bibliothek\.de\/item\/([ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]{32})$", "g");
                     const match = regexp.exec(string);
-                    if (match !== null && match[1] !== null) {
+                    if (match !== null && typeof match[1] !== "undefined" && typeof match[2] !== "undefined") {
                         if ($("#los").attr("data-href").length === 0) {
-                            $("#los").attr("href", url + match[1]);
+                            $("#los").attr("href", url + match[2] + "?system=" + match[1].substring(1));
                         } else {
-                            $("#los").attr("href", $("#los").attr("data-href") + encodeURIComponent(url + match[1]));
+                            $("#los").attr("href", $("#los").attr("data-href") + encodeURIComponent(url + match[2] + "?system=" + match[1].substring(1)));
                         }
                         $("#los").removeClass("disabled");
+                    } else if (match !== null && typeof match[2] !== "undefined") {
+                        if ($("#los").attr("data-href").length === 0) {
+                            $("#los").attr("href", url + match[2]);
+                        } else {
+                            $("#los").attr("href", $("#los").attr("data-href") + encodeURIComponent(url + match[2]));
+                        }
+                        $("#los").removeClass("disabled");       
                     } else {
                         $("#los").attr("href", "#");
                         $("#los").addClass("disabled");
