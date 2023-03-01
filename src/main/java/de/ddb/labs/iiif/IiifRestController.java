@@ -139,7 +139,8 @@ class IiifRestController {
                 final StreamResult result = new StreamResult(writer);
 
                 final Transformer transformer01 = templates01.newTransformer();
-                transformer01.setParameter("uri", baseUrl + request.getRequestURI() + (request.getQueryString().isBlank() ? "" : "?" + request.getQueryString()));
+                final String queryParameter = request.getQueryString();
+                transformer01.setParameter("uri", baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter));
 
                 final TransformerHandler transformer02 = ((SAXTransformerFactory) factory).newTransformerHandler(templates02);
                 transformer02.setResult(result);
