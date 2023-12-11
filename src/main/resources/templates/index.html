@@ -204,7 +204,7 @@
                 function extractData(id, callback) {
                     $.getJSON('https://api.deutsche-digitale-bibliothek.de/2/items/' + id, function (data) {
                         const images = $(data.binaries.binary).filter(function (i, n) {
-                            return n.mimetype === 'image/jpeg';
+                            return n.mimetype === 'image/jpeg' || n.mimetype === 'application/pdf';
                         });
 
                         var extractedData = {};

@@ -58,7 +58,7 @@ class IiifRestController {
 
     private final static String DDB_API_PROD = "https://api.deutsche-digitale-bibliothek.de/items/";
     private final static String DDB_API_Q1 = "https://api-q1.deutsche-digitale-bibliothek.de/items/";
-    private final static String DDB_API_Q2 = "https://api-q1.deutsche-digitale-bibliothek.de/items/";
+    private final static String DDB_API_Q2 = "https://api-q2.deutsche-digitale-bibliothek.de/items/";
     private final static String API_KEY = "?oauth_consumer_key=";
     private final OkHttpClient httpClient;
     private final TransformerFactory factory;
