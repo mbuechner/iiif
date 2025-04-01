@@ -1,15 +1,15 @@
-FROM maven:3-openjdk-17-slim AS MAVEN_CHAIN
-COPY pom.xml /tmp/
-COPY src /tmp/src/
+FROM maven:3-eclipse-temurin-21-alpine AS mchain
 WORKDIR /tmp/
-RUN mvn package
+COPY pom.xml .
+COPY src/ src/
+RUN mvn clean package
 
-FROM openjdk:17-alpine
+FROM eclipse-temurin:21-alpine
+LABEL org.opencontainers.image.authors="m.buechner@dnb.de"
 ENV TZ=Europe/Berlin
 ENV IIIF.PORT=8080
-ENV XDG_CONFIG_HOME=/tmp
-RUN mkdir /home/zdbdump && apk add curl
-COPY --from=MAVEN_CHAIN /tmp/target/iiif.jar /home/iiif/iiif.jar
-WORKDIR /home/iiif/
+RUN mkdir /opt/iiif
+WORKDIR /opt/iiif
+COPY --from=mchain /tmp/target/iiif.jar iiif.jar
 CMD ["java", "-Xms256M", "-Xmx512G", "-jar", "iiif.jar"]
 EXPOSE 8080

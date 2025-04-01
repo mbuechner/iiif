@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 
-Copyright 2023 Michael Büchner, Deutsche Digitale Bibliothek
+Copyright 2023-2025 Michael Büchner, Deutsche Digitale Bibliothek
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ limitations under the License.
         <!-- url to provider record -->
         <!-- TODO: change the following url, when DDB api doesn't require a key anymore -->
         <xsl:variable name="providerUrl">
-            <xsl:text>https://www.deutsche-digitale-bibliothek.de/item/xml/</xsl:text>
+            <xsl:text>https://api.deutsche-digitale-bibliothek.de/2/items/</xsl:text>
             <xsl:value-of select="$providerId" />
         </xsl:variable>
         <!-- logo uuid of provider -->
