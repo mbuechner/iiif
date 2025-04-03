@@ -14,8 +14,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<xsl:stylesheet version="3.0" xmlns:array="http://www.w3.org/2005/xpath-functions/array" xmlns:ddblabs="https://labs.deutsche-digitale-bibliothek.de" xmlns:map="http://www.w3.org/2005/xpath-functions/map" xmlns:mets="http://www.loc.gov/METS/" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:oai="http://www.openarchives.org/OAI/2.0/" xmlns:saxon="http://saxon.sf.net/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-    <!-- <xsl:output encoding="UTF-8" indent="yes" method="json" saxon:property-order="id @context type @ a b c d e f g h i j k l m n o p q r s t u v w x y z * $" use-character-maps="no-escape-slash" /> -->
+<xsl:stylesheet version="3.0" xmlns:array="http://www.w3.org/2005/xpath-functions/array" xmlns:ddblabs="https://labs.deutsche-digitale-bibliothek.de" xmlns:map="http://www.w3.org/2005/xpath-functions/map" xmlns:mets="http://www.loc.gov/METS/" xmlns:mix="http://www.loc.gov/mix/v20" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:oai="http://www.openarchives.org/OAI/2.0/" xmlns:saxon="http://saxon.sf.net/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    <!-- <xsl:output encoding="UTF-8" indent="yes" method="json" saxon:property-order="@context id type label metadata summary requiredStatement rights provider items structures annotations thumbnail navDate homepage logo rendering seeAlso partOf start services" use-character-maps="no-escape-slash" /> -->
     <xsl:output encoding="UTF-8" indent="yes" method="json" use-character-maps="no-escape-slash" />
     <xsl:strip-space elements="*" />
     <xsl:character-map name="no-escape-slash">
@@ -24,7 +24,7 @@ limitations under the License.
     <!-- Global variables (these should be set from outside) -->
     <xsl:variable name="ddbId" select="'TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
     <xsl:variable name="providerId" select="'EGCA66RQCQZMVMLIFI74MXN4PU2Q6AF3'" />
-    <xsl:variable name="selfUrl" select="'https://iiif.deutsche-digitale-bibliothek.de/presentation/3/' || $ddbId" />
+    <xsl:variable name="selfUrl" select="'https://iiif.deutsche-digitale-bibliothek.de/presentation/3/' || $ddbId || '/'" />
     <xsl:function as="xs:string" name="ddblabs:normalizeUrl">
         <!--
         Funktion: ddblabs:normalizeUrl
@@ -62,7 +62,7 @@ limitations under the License.
                     ''" />
         <xsl:sequence select="concat('&lt;a href=&quot;', $url, '&quot;', $targetAttr, '&gt;', $text, '&lt;/a&gt;')" />
     </xsl:function>
-    <xsl:function name="ddblabs:generateProvider">
+    <xsl:function as="map(*)" name="ddblabs:generateProvider">
         <xsl:param as="xs:string" name="providerId" />
         <xsl:variable name="providerUrl" select="'https://api.deutsche-digitale-bibliothek.de/2/items/' || $providerId" />
         <xsl:variable name="orgXml" select="doc($providerUrl)" />
@@ -110,7 +110,7 @@ limitations under the License.
                                 'id': $providerUrl,
                                 'type': 'Text',
                                 'label': map {
-                                    'none': array {$orgXml/cortex/view/cortex-institution/name/text() || ' bei der DeutschenDigitalen Bibliothek'}
+                                    'de': array {$orgXml/cortex/view/cortex-institution/name/text() || ' bei der DeutschenDigitalen Bibliothek'}
                                 }
                             }
                         }" />
@@ -173,18 +173,198 @@ limitations under the License.
             </xsl:map>
         </xsl:sequence>
     </xsl:function>
+    <xsl:function as="map(*)" name="ddblabs:transform-div">
+        <!--
+            Funktion: fn:transform-div
+            Beschreibung:
+                Wandelt ein mets:div rekursiv in ein IIIF Range-Objekt um.
+                Verlinkte PHYS-IDs aus structLink (xlink:to) werden als Canvas-Objekte
+                in "items" eingefügt.
+        
+            Parameter:
+                $div  – mets:div-Element
+                $root – Wurzelknoten zur structLink-Auswertung
+        
+            Rückgabe:
+                map(*) – IIIF Range mit id, type, label und items
+        -->
+        <xsl:param as="element(mets:div)" name="div" />
+        <xsl:param as="document-node()" name="root" />
+
+        <xsl:variable name="id" select="string($div/@ID)" />
+        <xsl:variable name="label" select="($div/@LABEL, $div/@ORDERLABEL, $div/@ID)[. != ''][1]" />
+        <xsl:variable name="targets" select="$root//mets:structLink/mets:smLink[@xlink:from = $id]/@xlink:to" />
+
+        <xsl:variable name="child-divs" select="$div/mets:div" />
+
+        <!-- Canvas-Verlinkungen aus structLink -->
+        <xsl:variable as="array(*)" name="linked-canvases">
+            <xsl:sequence select="
+                    array {
+                        for $t in $targets
+                        return
+                            map {
+                                'id': $selfUrl || 'canvas/' || $t,
+                                'type': 'Canvas'
+                                (: optional: 'label': map { 'none': [string($label)] } :)
+                            }
+                    }
+                    " />
+        </xsl:variable>
+
+        <!-- Kind-Elemente rekursiv behandeln -->
+        <xsl:variable as="array(*)" name="child-items">
+            <xsl:choose>
+                <xsl:when test="exists($child-divs)">
+                    <xsl:sequence select="
+                            array {
+                                for $child in $child-divs
+                                return
+                                    ddblabs:transform-div($child, $root)
+                            }
+                            " />
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:sequence select="[]" />
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+
+        <!-- Mische eigene Kind-Divs und Canvas-Links -->
+        <xsl:variable name="all-items" select="
+                if (exists($child-items) or exists($linked-canvases))
+                then
+                    array:join(($child-items, $linked-canvases))
+                else
+                    array {$selfUrl || 'range/' || $id}
+                " />
+
+        <xsl:sequence select="
+                map {
+                    'id': $selfUrl || 'range/' || $id,
+                    'type': 'Range',
+                    'label': map {'none': [string($label)]},
+                    'items': $all-items
+                }
+                " />
+    </xsl:function>
+    <xsl:function as="map(*)" name="ddblabs:build-canvas">
+        <!--
+            Funktion: iiif:build-canvas
+            Beschreibung:
+                Baut ein vollständiges IIIF Canvas-Objekt aus einem mets:div in der PHYSICAL structMap.
+            Parameter:
+                $physDiv – <mets:div> mit TYPE="page"
+                $root – Root-Dokument zur Auflösung von fileGrp, FLocat, amdSec
+            Rückgabe:
+                map(*) – Ein IIIF-Canvas inklusive AnnotationPage, Annotation, Bildinformationen und Service
+        -->
+        <xsl:param as="element(mets:div)" name="physDiv" />
+        <xsl:param as="document-node()" name="root" />
+        <xsl:param as="xs:string" name="serviceVersion" />
+        <xsl:param as="xs:string" name="serviceProfileLevel" />
+
+        <!-- IDs und URLs -->
+        <xsl:variable name="physId" select="$physDiv/@ID" />
+
+        <!-- Hole passende IIIF-Datei -->
+        <xsl:variable name="iiifFile" select="ddblabs:find-iiif-file($physDiv, $root)" />
+        <xsl:variable name="fileId" select="string($iiifFile/@ID)" />
+        <xsl:variable name="infoUrl" select="string($iiifFile/mets:FLocat/@xlink:href)" />
+
+        <!-- Bilddimensionen -->
+        <xsl:variable name="mix" select="$root/mets:mets/mets:amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
+        <xsl:variable name="width" select="xs:integer($mix/mix:imageWidth)" />
+        <xsl:variable name="height" select="xs:integer($mix/mix:imageHeight)" />
+
+        <!-- Service-URL (ohne /info.json) -->
+        <xsl:variable name="serviceId" select="replace($infoUrl, '/info\.json$', '')" />
+
+        <!-- Suffix -->
+        <xsl:variable name="urlSuffix" select="
+                if ($serviceVersion = 'ImageService3')
+                then
+                    '/full/max/0/default.jpg'
+                else
+                    '/full/full/0/default.jpg'
+                " />
+
+        <!-- Zusammensetzen des Canvas-Objekts -->
+        <xsl:sequence select="
+                map {
+                    'id': $selfUrl || 'canvas/' || $physId,
+                    'type': 'Canvas',
+                    'height': $height,
+                    'width': $width,
+                    'items': [
+                        map {
+                            'id': $selfUrl || 'canvas/' || $physId || '/1',
+                            'type': 'AnnotationPage',
+                            'items': [
+                                map {
+                                    'id': $selfUrl || 'canvas/' || $physId || '/annotation/1',
+                                    'type': 'Annotation',
+                                    'motivation': 'painting',
+                                    'body': map {
+                                        'id': $serviceId || $urlSuffix,
+                                        'type': 'Image',
+                                        'format': 'image/jpeg',
+                                        'service': [
+                                            map {
+                                                'id': $serviceId,
+                                                'type': $serviceVersion,
+                                                'profile': $serviceProfileLevel
+                                            }
+                                        ],
+                                        'height': $height,
+                                        'width': $width
+                                    },
+                                    'target': $selfUrl || 'canvas/' || $physId
+                                }
+                            ]
+                        }
+                    ]
+                }
+                " />
+    </xsl:function>
+    <xsl:function as="element(mets:file)?" name="ddblabs:find-iiif-file">
+        <!--
+            Funktion: iiif:find-iiif-file
+            Beschreibung:
+                Findet das passende mets:file-Element mit MIMETYPE="application/json"
+                zu einem mets:div in der PHYSICAL structMap.
+        
+            Parameter:
+                $physDiv – <mets:div> mit fptr-Verweisen
+                $root    – Root-Dokument zur Suche im fileSec
+        
+            Rückgabe:
+                <mets:file> oder empty()
+        -->
+        <xsl:param as="element(mets:div)" name="physDiv" />
+        <xsl:param as="document-node()" name="root" />
+
+        <!-- Alle Datei-IDs, auf die verwiesen wird -->
+        <xsl:variable name="fileIDs" select="$physDiv/mets:fptr/@FILEID" />
+
+        <!-- Passende Datei aus fileGrp mit MIMETYPE="application/json" -->
+        <xsl:sequence select="
+                $root//mets:fileGrp[@USE = 'IIIF']/mets:file[@ID = $fileIDs][@MIMETYPE = 'application/json']
+                " />
+    </xsl:function>
     <xsl:template match="/">
         <xsl:choose>
             <xsl:when test="count(//mets:mets/mets:fileSec/mets:fileGrp/mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']) &gt; 0">
                 <xsl:apply-templates mode="iiif" select="/" />
             </xsl:when>
             <xsl:otherwise>
-                <xsl:message terminate="yes">Could not find an adequate mode to transform the data.</xsl:message>
+                <xsl:message terminate="yes">Could not find an adequate mode to transform the
+                    data.</xsl:message>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
     <xsl:template match="/" mode="iiif">
-        <xsl:variable name="serviceJson" select="json-doc(ddblabs:normalizeUrl(string(//mets:mets/mets:fileSec/mets:fileGrp/mets:file[1][@MIMETYPE = 'application/vnd.kitodo.iiif']/mets:FLocat/@xlink:href)) || '/info.json')" />
+        <xsl:variable name="serviceJson" select="json-doc(ddblabs:normalizeUrl(string(//mets:mets/mets:fileSec/mets:fileGrp[@USE = 'IIIF']/mets:file[1]/mets:FLocat/@xlink:href)))" />
         <xsl:variable name="serviceVersion">
             <xsl:choose>
                 <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/1/context.json'">ImageService1</xsl:when>
@@ -286,7 +466,6 @@ limitations under the License.
                     }" />
             <!-- provider -->
             <xsl:map-entry key="'provider'" select="array {ddblabs:generateProvider($providerId)}" />
-
             <!-- 
               "homepage": [
                 {
@@ -302,11 +481,16 @@ limitations under the License.
               ],
             -->
             <xsl:map-entry key="'homepage'" select="
-                    map {
-                        'id': 'https://www.deutsche-digitale-bibliothek.de/item/' || $ddbId,
-                        'type': 'Text',
-                        'label': map {'none': array {'Deutsche Digitale Bibliothek'}},
-                        'format': 'text/html'
+                    array {
+                        map {
+                            'id': 'https://www.deutsche-digitale-bibliothek.de/item/' || $ddbId,
+                            'type': 'Text',
+                            'label': map {
+                                'de': array {'Deutsche Digitale Bibliothek'},
+                                'en': array {'German Digitale Library'}
+                            },
+                            'format': 'text/html'
+                        }
                     }" />
             <!-- 
               "seeAlso": [
@@ -319,11 +503,13 @@ limitations under the License.
               ]
             -->
             <xsl:map-entry key="'seeAlso'" select="
-                    map {
-                        'id': 'https://api.deutsche-digitale-bibliothek.de/items/' || $ddbId,
-                        'type': 'Dataset',
-                        'format': 'application/xml',
-                        'profile': 'https://www.deutsche-digitale-bibliothek.de/ns/cortex'
+                    array {
+                        map {
+                            'id': 'https://api.deutsche-digitale-bibliothek.de/items/' || $ddbId,
+                            'type': 'Dataset',
+                            'format': 'application/xml',
+                            'profile': 'https://www.deutsche-digitale-bibliothek.de/ns/cortex'
+                        }
                     }" />
             <!-- 
               "start": {
@@ -336,7 +522,6 @@ limitations under the License.
                         'id': $selfUrl || '/canvas/' || //mets:mets/mets:structMap/mets:div/mets:div[@ORDER = '1']/@ID,
                         'type': 'Canvas'
                     }" />
-
             <!-- 
               "structures": [
                 {
@@ -351,21 +536,13 @@ limitations under the License.
                     ]
                   },
             -->
-            <xsl:variable as="map(*)" name="structures">
-                <xsl:map>
-                    <xsl:map-entry key="'id'" select="$selfUrl || '/range/r0'" />
-                    <xsl:map-entry key="'type'" select="'Range'" />
-                    <xsl:map-entry key="'label'" select="
-                            map {
-                                'de': array {'Inhaltsbersicht'},
-                                'en': array {'Table of Contents'}
-                            }
-                            " />
-                    <xsl:apply-templates mode="iiif" select="//mets:mets/mets:structMap[@TYPE = 'LOGICAL']/mets:div" />
-                </xsl:map>
-            </xsl:variable>
-            <xsl:map-entry key="'structures'" select="array {$structures}"> </xsl:map-entry>
-
+            <xsl:map-entry key="'structures'" select="
+                    array {
+                        for $div in //mets:structMap[@TYPE = 'LOGICAL']/mets:div
+                        return
+                            ddblabs:transform-div($div, .)
+                    }
+                    " />
 
             <!-- 
             "items": [
@@ -381,96 +558,13 @@ limitations under the License.
                         {
                         ...
             -->
-            <xsl:variable name="fileIds" select="//mets:mets/mets:fileSec/mets:fileGrp/mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']/@ID" />
-
-            <xsl:variable as="map(*)*" name="items">
-                <xsl:for-each select="//mets:mets/mets:structMap[@TYPE = 'PHYSICAL']/mets:div/mets:div">
-                    <xsl:sort data-type="number" order="ascending" select="@order" />
-                    <xsl:variable name="fileId" select="mets:fptr/@FILEID[. = $fileIds][1]" />
-
-                    <xsl:map>
-                        <xsl:map-entry key="'id'" select="$selfUrl || '/range/' || @ID" />
-                        <xsl:map-entry key="'type'" select="'Canvas'" />
-                        <xsl:map-entry key="'label'" select="
-                                map {'de': array {('Meine Bildunterschrift')}}
-                                " />
-                        <xsl:map-entry key="'height'" select="600" />
-                        <xsl:map-entry key="'width'" select="800" />
-                        <xsl:map-entry key="'test'" select="array {data(//mets:mets/mets:fileSec/mets:fileGrp/mets:file[@ID = $fileId]/mets:FLocat/@xlink:href)}" />
-                    </xsl:map>
-                </xsl:for-each>
-            </xsl:variable>
-            <xsl:map-entry key="'items'" select="array {$items}"> </xsl:map-entry>
-        </xsl:map>
-
-    </xsl:template>
-    <xsl:template as="map(*)" match="mets:div" mode="iiif">
-        <xsl:param as="map(*)*" name="canvasItems" />
-        <xsl:variable as="map(*)*" name="rangeItems">
-            <xsl:map>
-                <xsl:map-entry key="'id'" select="$selfUrl || '/range/' || string(@ID)" />
-                <xsl:map-entry key="'type'" select="'Range'" />
-                <xsl:choose>
-                    <xsl:when test="@LABEL">
-                        <xsl:map-entry key="'label'" select="string(@LABEL)" />
-                    </xsl:when>
-                    <xsl:when test="@ORDERLABEL">
-                        <xsl:map-entry key="'label'" select="string(@LABEL)" />
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:map-entry key="'label'" select="string(@LABEL)" />
-                    </xsl:otherwise>
-                </xsl:choose>
-                <xsl:choose>
-                    <xsl:when test="exists(mets:div)">
-                        <xsl:apply-templates mode="iiif" select="mets:div">
-                            <xsl:with-param as="map(*)*" name="canvasItems">
-                                <xsl:apply-templates mode="iiif" select="//mets:mets/mets:structLink/mets:smLink[@xlink:from = current()/@ID]" />
-                            </xsl:with-param>
-                        </xsl:apply-templates>
-                    </xsl:when>
-                    <xsl:when test="exists(//mets:mets/mets:structLink/mets:smLink[@xlink:from = current()/@ID])">
-                        <xsl:variable as="map(*)*" name="canvasItems">
-                            <xsl:apply-templates mode="iiif" select="//mets:mets/mets:structLink/mets:smLink[@xlink:from = current()/@ID]" />
-                        </xsl:variable>
-                        <xsl:map-entry key="'items'" select="array {$canvasItems}" />
-                    </xsl:when>
-                    <xsl:otherwise />
-                </xsl:choose>
-
-            </xsl:map>
-        </xsl:variable>
-
-        <xsl:map-entry key="'items'">
-            <xsl:variable as="array(*)" name="combinedArray">
-                <!-- Erstelle ein temporäres Array, das nur nicht-leere Items enthält -->
-                <xsl:sequence select="
-                        array:join((
-                        if (exists($rangeItems) and map:size($rangeItems) > 0) then
-                            array {$rangeItems}
-                        else
-                            (),
-                        if (exists($canvasItems)) then
-                            array {$canvasItems}
-                        else
-                            ()
-                        ))" />
-            </xsl:variable>
-
-            <!-- Prüfe, ob das kombinierte Array leer ist, um ein leeres Objekt zu vermeiden -->
-            <xsl:sequence select="
-                    if (array:size($combinedArray) > 0) then
-                        $combinedArray
-                    else
-                        ()" />
-        </xsl:map-entry>
-    </xsl:template>
-
-    <xsl:template as="map(*)" match="mets:smLink" mode="iiif">
-        <xsl:map>
-            <xsl:map-entry key="'id'" select="$selfUrl || '/canvas/' || string(@xlink:to)" />
-            <xsl:map-entry key="'type'" select="'Canvas'" />
+            <xsl:map-entry key="'items'" select="
+                    array {
+                        for $div in //mets:structMap[@TYPE = 'PHYSICAL']//mets:div[@TYPE = 'page']
+                        return
+                            ddblabs:build-canvas($div, ., $serviceVersion, $serviceProfileLevel)
+                    }
+                    " />
         </xsl:map>
     </xsl:template>
-
 </xsl:stylesheet>
