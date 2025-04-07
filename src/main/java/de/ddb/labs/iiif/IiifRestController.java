@@ -262,7 +262,7 @@ class IiifRestController {
                     final StreamResult result = new StreamResult(writer);
 
                     final Transformer transformer01 = templatesMetsmodsToIiif.newTransformer();
-                    transformer01.setParameter("itemId", request.getRequestURI());
+                    transformer01.setParameter("itemId", id);
                     transformer01.setParameter("itemUrl", baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter));
                     transformer01.setParameter("providerId", providerId);
 
