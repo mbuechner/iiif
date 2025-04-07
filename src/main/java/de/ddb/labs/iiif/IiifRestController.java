@@ -86,7 +86,7 @@ class IiifRestController {
     private final Logger LOG = LoggerFactory.getLogger(IiifRestController.class);
     private final OkHttpClient httpClient;
     private final DocumentBuilder db;
-    private final XPathExpression checkExpr, recordExpr, oaiRecord;
+    private final XPathExpression checkExpr, recordExpr, oaiRecord, providerIdExpr;
     private final TransformerFactory factory;
 
     @Value("${iiif.baseurl}")
@@ -165,6 +165,7 @@ class IiifRestController {
         checkExpr = xpath.compile("/cortex:cortex/ns14:source/ns14:record/@type");
         recordExpr = xpath.compile("/cortex:cortex/ns14:source/ns14:record");
         oaiRecord = xpath.compile("/oai:record/oai:metadata");
+        providerIdExpr = xpath.compile("/cortex:cortex/cortex:provider-info/cortex:provider-ddb-id");
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -244,8 +245,9 @@ class IiifRestController {
                 final String typeValue = (String) checkExpr.evaluate(doc, XPathConstants.STRING);
                 final String queryParameter = request.getQueryString();
 
-                if ("http://www.loc.gov/METS/".equals(typeValue)) {
+                if ("http://www.loc.gov/METS/".equalsIgnoreCase(typeValue)) {
                     LOG.info("METS-Typ erkannt – Transformation startet...");
+                    final String providerId = (String) providerIdExpr.evaluate(doc, XPathConstants.STRING);
 
                     // Maskierten Inhalt extrahieren                   
                     final Element recordElement = (Element) recordExpr.evaluate(doc, XPathConstants.NODE);
@@ -255,21 +257,14 @@ class IiifRestController {
                     Document metsDoc = db.parse(new ByteArrayInputStream(maskedXml.getBytes(StandardCharsets.UTF_8)));
                     metsDoc = maybeReplaceWithMetadata(metsDoc);
 
-                    /*
-                    final StringWriter writer = new StringWriter();
-                    final TransformerFactory tf = TransformerFactory.newInstance();
-                    final Transformer transformer = tf.newTransformer();
-                    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-                    transformer.transform(new DOMSource(metsDoc), new StreamResult(writer));
-                    LOG.info(writer.toString());
-                     */
                     // Transformation
                     final StringWriter writer = new StringWriter();
                     final StreamResult result = new StreamResult(writer);
 
                     final Transformer transformer01 = templatesMetsmodsToIiif.newTransformer();
+                    transformer01.setParameter("id", request.getRequestURI());
                     transformer01.setParameter("uri", baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter));
-                    transformer01.setParameter("ddbId", request.getRequestURI());
+                    transformer01.setParameter("providerId", providerId);
 
                     transformer01.transform(new DOMSource(metsDoc), result);
 
