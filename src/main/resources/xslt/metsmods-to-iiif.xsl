@@ -22,9 +22,32 @@ limitations under the License.
         <xsl:output-character character="/" string="/" />
     </xsl:character-map>
     <!-- Global parameters (these should be set from outside) -->
-    <xsl:param name="itemId" select="'TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
-    <xsl:param name="itemUrl" select="'https://iiif.deutsche-digitale-bibliothek.de/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
-    <xsl:param name="providerId" select="'BZVTR553HLJBDMQD5NCJ6YKP3HMBQRF4'" />
+    <xsl:param as="xs:string" name="itemId" select="'TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
+    <xsl:param as="xs:string" name="itemUrl" select="'https://iiif.deutsche-digitale-bibliothek.de/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
+    <xsl:param as="xs:string" name="providerId" select="'BZVTR553HLJBDMQD5NCJ6YKP3HMBQRF4'" />
+    <xsl:param as="xs:string" name="preferredUse" select="
+            if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'IIIF'])) then
+                'IIIF'
+            else
+                if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'MAX'])) then
+                    'MAX'
+                else
+                    if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'DEFAULT'])) then
+                        'DEFAULT'
+                    else
+                        'ERROR'" />
+    <xsl:param as="xs:string" name="preferredUseForThumbnails" select="
+            if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'THUMBS'])) then
+                'THUMBS'
+            else
+                if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'MIN'])) then
+                    'MIN'
+                else
+                    if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'DEFAULT'])) then
+                        'DEFAULT'
+                    else
+                        'ERROR'" />
+
     <xsl:function as="xs:string" name="ddblabs:normalizeUrl">
         <!--
         Funktion: ddblabs:normalizeUrl
@@ -257,6 +280,104 @@ limitations under the License.
                 $physDiv – <mets:div> mit TYPE="page"
                 $root – Root-Dokument zur Auflösung von fileGrp, FLocat, amdSec
             Rückgabe:
+        -->
+        <xsl:param as="element(mets:div)" name="physDiv" />
+        <xsl:param as="document-node()" name="root" />
+        <xsl:param as="xs:integer" name="position" />
+
+        <!-- IDs und URLs -->
+        <xsl:variable name="physId" select="$physDiv/@ID" />
+
+        <!-- Hole passende IIIF-Datei -->
+        <!-- TODO (in IIIF verbessern) -->
+        <xsl:variable name="iiifFile" select="$root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredUse]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr/@FILEID]" />
+        <xsl:variable name="fileId" select="string($iiifFile/@ID)" />
+        <xsl:variable name="fileUrl" select="string($iiifFile/mets:FLocat/@xlink:href)" />
+        <xsl:variable name="mimeType" select="string($iiifFile/@MIMETYPE)" />
+        <xsl:variable name="thumbnailUrl" select="
+                if (exists($root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredUseForThumbnails]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = 'phys14754105']/mets:fptr/@FILEID]/mets:FLocat/@xlink:href))
+                then
+                    string($root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredUseForThumbnails]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = 'phys14754105']/mets:fptr/@FILEID]/mets:FLocat/@xlink:href)
+                else
+                    $fileUrl
+                " />
+        <xsl:variable name="thumbnailMimeType" select="
+                if (exists($root/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredUseForThumbnails]/mets:file[@ID = $fileId]/@MIMETYPE))
+                then
+                    string($root/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredUseForThumbnails]/mets:file[@ID = $fileId]/@MIMETYPE)
+                else
+                    $mimeType
+                " />
+
+        <!-- Bilddimensionen -->
+        <xsl:variable name="mix" select="$root/mets:mets/mets:amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
+        <xsl:variable name="width" select="
+                if ($mix/mix:imageWidth/text()) then
+                    xs:integer($mix/mix:imageWidth)
+                else
+                    800" />
+        <xsl:variable name="height" select="
+                if ($mix/mix:imageHeight/text()) then
+                    xs:integer($mix/mix:imageHeight)
+                else
+                    600" />
+
+        <!-- Zusammensetzen des Canvas-Objekts -->
+        <xsl:sequence select="
+                map {
+                    'id': $itemUrl || '/canvas/' || $physId,
+                    'type': 'Canvas',
+                    'height': $height,
+                    'width': $width,
+                    'items': [
+                        map {
+                            'id': $itemUrl || '/canvas/' || $physId || '/1',
+                            'type': 'AnnotationPage',
+                            'items': [
+                                map {
+                                    'id': $itemUrl || '/canvas/' || $physId || '/annotation/1',
+                                    'type': 'Annotation',
+                                    'motivation': 'painting',
+                                    'body': map {
+                                        'id': $fileUrl,
+                                        'type': 'Image',
+                                        'format': $mimeType,
+                                        'height': $height,
+                                        'width': $width
+                                    },
+                                    'target': $itemUrl || '/canvas/' || $physId
+                                }
+                            ]
+                        }
+                    ],
+                    'label': map {
+                        'none': [
+                            if (string-length(normalize-space($physDiv/@ORDERLABEL)) > 0)
+                            then
+                                string($physDiv/@ORDERLABEL)
+                            else
+                                string($position)
+                        ]
+                    },
+                    'thumbnail': [
+                        map {
+                            'id': $thumbnailUrl,
+                            'type': 'Image',
+                            'format': $thumbnailMimeType
+                        }
+                    ]
+                }
+                " />
+    </xsl:function>
+    <xsl:function as="map(*)" name="ddblabs:build-iiif-canvas">
+        <!--
+            Funktion: iiif:build-iiif-canvas
+            Beschreibung:
+                Baut ein vollständiges IIIF Canvas-Objekt aus einem mets:div in der PHYSICAL structMap.
+            Parameter:
+                $physDiv – <mets:div> mit TYPE="page"
+                $root – Root-Dokument zur Auflösung von fileGrp, FLocat, amdSec
+            Rückgabe:
                 map(*) – Ein IIIF-Canvas inklusive AnnotationPage, Annotation, Bildinformationen und Service
         -->
         <xsl:param as="element(mets:div)" name="physDiv" />
@@ -265,15 +386,11 @@ limitations under the License.
         <xsl:param as="xs:string" name="serviceProfileLevel" />
         <xsl:param as="xs:integer" name="position" />
 
-        <xsl:message>
-            <xsl:value-of select="$physDiv/@ORDERLABEL" />
-        </xsl:message>
-
         <!-- IDs und URLs -->
         <xsl:variable name="physId" select="$physDiv/@ID" />
 
         <!-- Hole passende IIIF-Datei -->
-        <xsl:variable name="iiifFile" select="ddblabs:find-iiif-file($physDiv, $root)" />
+        <xsl:variable name="iiifFile" select="$root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredUse]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr/@FILEID]" />
         <xsl:variable name="fileId" select="string($iiifFile/@ID)" />
         <xsl:variable name="infoUrl" select="string($iiifFile/mets:FLocat/@xlink:href)" />
 
@@ -295,7 +412,7 @@ limitations under the License.
 
         <!-- Suffix -->
         <xsl:variable name="urlSuffix" select="
-                if ($serviceVersion = 'ImageService3')
+                if ($serviceVersion = '3')
                 then
                     '/full/max/0/default.jpg'
                 else
@@ -325,7 +442,7 @@ limitations under the License.
                                         'service': [
                                             map {
                                                 'id': $serviceId,
-                                                'type': $serviceVersion,
+                                                'type': 'ImageService' || $serviceVersion,
                                                 'profile': $serviceProfileLevel
                                             }
                                         ],
@@ -350,66 +467,35 @@ limitations under the License.
                         map {
                             'id': $serviceId || '/full/!300,300/0/default.jpg',
                             'type': 'Image',
-                            'format': 'image/jpeg'
+                            'format': 'image/jpeg',
+                            'service': [
+                                map {
+                                    'id': $serviceId,
+                                    'type': 'ImageService' || $serviceVersion,
+                                    'profile': $serviceProfileLevel
+                                }
+                            ]
                         }
                     ]
                 }
                 " />
     </xsl:function>
-    <xsl:function as="element(mets:file)?" name="ddblabs:find-iiif-file">
-        <!--
-            Funktion: iiif:find-iiif-file
-            Beschreibung:
-                Findet das passende mets:file-Element mit MIMETYPE="application/json"
-                zu einem mets:div in der PHYSICAL structMap.
-        
-            Parameter:
-                $physDiv – <mets:div> mit fptr-Verweisen
-                $root    – Root-Dokument zur Suche im fileSec
-        
-            Rückgabe:
-                <mets:file> oder empty()
-        -->
-        <xsl:param as="element(mets:div)" name="physDiv" />
-        <xsl:param as="document-node()" name="root" />
-
-        <!-- Alle Datei-IDs, auf die verwiesen wird -->
-        <xsl:variable name="fileIDs" select="$physDiv/mets:fptr/@FILEID" />
-
-        <!-- Passende Datei aus fileGrp mit MIMETYPE="application/json" -->
-        <xsl:sequence select="
-                $root//mets:fileGrp[@USE = 'IIIF']/mets:file[@ID = $fileIDs][@MIMETYPE = 'application/json']
-                " />
-    </xsl:function>
     <xsl:template match="/">
         <xsl:choose>
-            <xsl:when test="count(//mets:mets/mets:fileSec/mets:fileGrp/mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']) &gt; 0">
+            <xsl:when test="$preferredUse = 'IIIF'">
                 <xsl:apply-templates mode="iiif" select="/" />
             </xsl:when>
+            <xsl:when test="$preferredUse = 'MAX' or $preferredUse = 'DEFAULT'">
+                <xsl:apply-templates mode="default" select="/" />
+            </xsl:when>
             <xsl:otherwise>
-                <xsl:message terminate="yes">Could not find an adequate mode to transform the
-                    data.</xsl:message>
+                <xsl:message error-code="501" terminate="yes">
+                    <xsl:value-of select="'Could not find an adequate mode to transform the data.'" />
+                </xsl:message>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
-    <xsl:template match="/" mode="iiif">
-        <xsl:variable name="serviceJson" select="json-doc(ddblabs:normalizeUrl(string(//mets:mets/mets:fileSec/mets:fileGrp[@USE = 'IIIF']/mets:file[1]/mets:FLocat/@xlink:href)))" />
-        <xsl:variable name="serviceVersion">
-            <xsl:choose>
-                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/1/context.json'">ImageService1</xsl:when>
-                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/2/context.json'">ImageService2</xsl:when>
-                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/3/context.json'">ImageService3</xsl:when>
-                <xsl:otherwise>unknown</xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-        <xsl:variable name="serviceProfileLevel">
-            <xsl:choose>
-                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/2/level1.json'">level1</xsl:when>
-                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/2/level2.json'">level2</xsl:when>
-                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/2/level3.json'">level3</xsl:when>
-                <xsl:otherwise>unknown</xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
+    <xsl:template match="/" mode="default">
         <xsl:map>
             <!-- "@context": "http://iiif.io/api/presentation/3/context.json" -->
             <xsl:map-entry key="'@context'" select="'http://iiif.io/api/presentation/3/context.json'" />
@@ -425,7 +511,7 @@ limitations under the License.
             -->
             <xsl:map-entry key="'label'" select="
                     map {
-                        'de': array {//mets:mets/mets:dmdSec/mets:mdWrap/mets:xmlData/mods:mods/mods:relatedItem/mods:titleInfo/mods:title/text()}
+                        'de': array {/mets:mets/mets:dmdSec/mets:mdWrap/mets:xmlData/mods:mods/mods:relatedItem/mods:titleInfo/mods:title/text()}
                     }" />
             <!--
             "thumbnail": [{
@@ -442,16 +528,11 @@ limitations under the License.
             <xsl:map-entry key="'thumbnail'" select="
                     array {
                         map {
-                            'id': ddblabs:normalizeUrl(string(//mets:mets/mets:fileSec/mets:fileGrp/mets:file[1][@MIMETYPE = 'application/vnd.kitodo.iiif']/mets:FLocat/@xlink:href)) || '/full/200,/0/default.jpg',
+                            'id': ddblabs:normalizeUrl(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredUseForThumbnails]/mets:file[1]/mets:FLocat/@xlink:href)),
                             'type': 'Image',
-                            'format': 'image/jpeg',
-                            'service': array {
-                                map {
-                                    'id': string(//mets:mets/mets:fileSec/mets:fileGrp/mets:file[1][@MIMETYPE = 'application/vnd.kitodo.iiif']/mets:FLocat/@xlink:href),
-                                    'type': $serviceVersion,
-                                    'profile': $serviceProfileLevel
-                                }
-                            }
+                            'format': string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredUseForThumbnails]/mets:file[1]/@MIMETYPE),
+                            'height': 600,
+                            'width': 800
                         }
                     }" />
             <!--
@@ -465,7 +546,7 @@ limitations under the License.
             <!--
             "rights": "http://creativecommons.org/licenses/by-nc/4.0/",
             -->
-            <xsl:map-entry key="'rights'" select="//mets:mets/mets:dmdSec/mets:mdWrap/mets:xmlData/mods:mods/mods:recordInfo/mods:recordInfoNote[@type = 'license']/text()" />
+            <xsl:map-entry key="'rights'" select="/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:recordInfo/mods:recordInfoNote[@type = 'license']/text()" />
             <!-- 
             "requiredStatement": {
                 "label": {
@@ -490,7 +571,17 @@ limitations under the License.
                             'de': array {'Zuschreibung'}
                         },
                         'value': map {
-                            'none': array {ddblabs:generateLink(//mets:mets/mets:dmdSec/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo/mods:publisher[1], //mets:mets/mets:dmdSec/mets:mdWrap/mets:xmlData/mods:mods/mods:identifier[@type = 'purl'][1], true())}
+                            'none': array {
+                                ddblabs:generateLink(
+                                if (exists(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']))
+                                then
+                                    /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']/mods:publisher[1]/text()
+                                else
+                                    /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[not(@eventType)][1]/mods:publisher[1]/text(),
+                                
+                                
+                                /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:identifier[@type = 'purl'][1], true())
+                            }
                         }
                     }" />
             <!-- provider -->
@@ -548,7 +639,222 @@ limitations under the License.
             -->
             <xsl:map-entry key="'start'" select="
                     map {
-                        'id': $itemUrl || '/canvas/' || //mets:mets/mets:structMap/mets:div/mets:div[@ORDER = '1']/@ID,
+                        'id': $itemUrl || '/canvas/' || /mets:mets/mets:structMap[@TYPE = 'PHYSICAL']/mets:div/mets:div[@ORDER = '1']/@ID,
+                        'type': 'Canvas'
+                    }" />
+            <!-- 
+              "structures": [
+                {
+                  "id": "https://labs.deutsche-digitale-bibliothek.de/iiif/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO/range/r0",
+                  "type": "Range",
+                  "label": {
+                    "de": [
+                      "Übersicht"
+                    ],
+                    "en": [
+                      "Content"
+                    ]
+                  },
+            -->
+            <xsl:map-entry key="'structures'" select="
+                    array {
+                        for $div in //mets:structMap[@TYPE = 'LOGICAL']/mets:div
+                        return
+                            ddblabs:transform-div($div, .)
+                    }
+                    " />
+
+            <!-- 
+            "items": [
+                {
+                    "id": "https://labs.deutsche-digitale-bibliothek.de/iiif/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO/canvas/p1",
+                    "type": "Canvas",
+                    "label": {
+                        "de": ["Auriga (1967), Frachtschiff, Argo Reederei Richard Adler & Söhne, Bremen, Bau-Nr. 1140"]
+                    },
+                    "height": 1155,
+                    "width": 1732,
+                    "items": [
+                        {
+                        ...
+            -->
+            <xsl:variable name="divs" select="/mets:mets/mets:structMap[@TYPE = 'PHYSICAL']/mets:div/mets:div" />
+            <xsl:map-entry key="'items'" select="
+                    array {
+                        for $i in 1 to count($divs)
+                        return
+                            ddblabs:build-canvas($divs[$i], ., $i)
+                    }
+                    " />
+        </xsl:map>
+    </xsl:template>
+    <xsl:template match="/" mode="iiif">
+        <xsl:variable name="serviceJson" select="json-doc(ddblabs:normalizeUrl(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'IIIF']/mets:file[1]/mets:FLocat/@xlink:href)))" />
+        <xsl:variable name="serviceVersion">
+            <xsl:choose>
+                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/1/context.json'">1</xsl:when>
+                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/2/context.json'">2</xsl:when>
+                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/3/context.json'">3</xsl:when>
+                <xsl:otherwise>0</xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+        <xsl:variable name="serviceProfileLevel">
+            <xsl:choose>
+                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/' || $serviceVersion || '/level1.json'">level1</xsl:when>
+                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/' || $serviceVersion || '/level2.json'">level2</xsl:when>
+                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/' || $serviceVersion || '/level3.json'">level3</xsl:when>
+                <xsl:otherwise>level0</xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+        <xsl:map>
+            <!-- "@context": "http://iiif.io/api/presentation/3/context.json" -->
+            <xsl:map-entry key="'@context'" select="'http://iiif.io/api/presentation/3/context.json'" />
+            <!-- "id": "https://www.deutsche-digitale-bibliothek.de/item/WYSPZ4UGJYOETW5F7EFHLR3GRQODFKCD" -->
+            <xsl:map-entry key="'id'" select="$itemUrl" />
+            <!-- "type": "Manifest", -->
+            <xsl:map-entry key="'type'" select="'Manifest'" />
+            <!-- 
+            "label": {
+              "de": [
+                "Bergedorfer Zeitung und Anzeiger"
+            ]},
+            -->
+            <xsl:map-entry key="'label'" select="
+                    map {
+                        'de': array {/mets:mets/mets:dmdSec/mets:mdWrap/mets:xmlData/mods:mods/mods:relatedItem/mods:titleInfo/mods:title/text()}
+                    }" />
+            <!--
+            "thumbnail": [{
+               "id": "https://iiif.deutsche-digitale-bibliothek.de/image/2/475edf69-a029-46cb-a165-c331a59e02a6/full/200,/0/default.jpg",
+               "type": "Image",
+               "format": "image/jpeg",
+               "service": [{
+                  "id": "https://iiif.deutsche-digitale-bibliothek.de/image/2/475edf69-a029-46cb-a165-c331a59e02a6",
+                  "type": "ImageService2",
+                  "profile": "level2"
+               }]
+            }],
+            -->
+            <xsl:map-entry key="'thumbnail'" select="
+                    array {
+                        map {
+                            'id': ddblabs:normalizeUrl(string(/mets:mets/mets:fileSec/mets:fileGrp/mets:file[1][@MIMETYPE = 'application/vnd.kitodo.iiif']/mets:FLocat/@xlink:href)) || '/full/!300,300/0/default.jpg',
+                            'type': 'Image',
+                            'format': 'image/jpeg',
+                            'service': array {
+                                map {
+                                    'id': string(/mets:mets/mets:fileSec/mets:fileGrp/mets:file[1][@MIMETYPE = 'application/vnd.kitodo.iiif']/mets:FLocat/@xlink:href),
+                                    'type': 'ImageService' || $serviceVersion,
+                                    'profile': $serviceProfileLevel
+                                }
+                            }
+                        }
+                    }" />
+            <!--
+            "viewingDirection": "left-to-right",
+            -->
+            <xsl:map-entry key="'viewingDirection'" select="'left-to-right'" />
+            <!--
+            "behavior": [ "individuals" ],
+            -->
+            <xsl:map-entry key="'behavior'" select="array {'individuals'}" />
+            <!--
+            "rights": "http://creativecommons.org/licenses/by-nc/4.0/",
+            -->
+            <xsl:map-entry key="'rights'" select="/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:recordInfo/mods:recordInfoNote[@type = 'license']/text()" />
+            <!-- 
+            "requiredStatement": {
+                "label": {
+                    "en": [
+                        "Attribution"
+                        ],
+                    "de": [
+                        "Zuschreibung"
+                    ]
+                },
+                "value": {
+                    "none": [
+                        "<a href=\"https://iserver.imm-hamburg.de/objekt_start.fau?prj=IMMH-Digita&dm=Datenbankname&ref=102719\" target=\"_blank\">Peter Tamm Sen. Stiftung</a>"
+                    ]
+                }
+            },
+            -->
+            <xsl:map-entry key="'requiredStatement'" select="
+                    map {
+                        'label': map {
+                            'en': array {'Attribution'},
+                            'de': array {'Zuschreibung'}
+                        },
+                        'value': map {
+                            'none': array {
+                                ddblabs:generateLink(
+                                if (exists(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']))
+                                then
+                                    /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']/mods:publisher[1]/text()
+                                else
+                                    /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[not(@eventType)][1]/mods:publisher[1]/text(),
+                                
+                                
+                                /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:identifier[@type = 'purl'][1], true())
+                            }
+                        }
+                    }" />
+            <!-- provider -->
+            <xsl:map-entry key="'provider'" select="array {ddblabs:generateProvider($providerId)}" />
+            <!-- 
+              "homepage": [
+                {
+                  "id": "https://www.deutsche-digitale-bibliothek.de/item/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO",
+                  "type": "Text",
+                  "label": {
+                    "none": [
+                      "Deutsche Digitale Bibliothek"
+                    ]
+                  },
+                  "format": "text/html"
+                }
+              ],
+            -->
+            <xsl:map-entry key="'homepage'" select="
+                    array {
+                        map {
+                            'id': 'https://www.deutsche-digitale-bibliothek.de/item/' || $itemId,
+                            'type': 'Text',
+                            'label': map {
+                                'de': array {'Deutsche Digitale Bibliothek'},
+                                'en': array {'German Digitale Library'}
+                            },
+                            'format': 'text/html'
+                        }
+                    }" />
+            <!-- 
+              "seeAlso": [
+                {
+                  "id": "https://api.deutsche-digitale-bibliothek.de/items/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO",
+                  "type": "Dataset",
+                  "format": "application/xml",
+                  "profile": "https://www.deutsche-digitale-bibliothek.de/ns/cortex"
+                }
+              ]
+            -->
+            <xsl:map-entry key="'seeAlso'" select="
+                    array {
+                        map {
+                            'id': 'https://api.deutsche-digitale-bibliothek.de/2/items/' || $itemId,
+                            'type': 'Dataset',
+                            'format': 'application/xml',
+                            'profile': 'https://www.deutsche-digitale-bibliothek.de/ns/cortex'
+                        }
+                    }" />
+            <!-- 
+              "start": {
+                "id": "https://labs.deutsche-digitale-bibliothek.de/iiif/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO/canvas/p1",
+                "type": "Canvas"
+              }
+            -->
+            <xsl:map-entry key="'start'" select="
+                    map {
+                        'id': $itemUrl || '/canvas/' || /mets:mets/mets:structMap[@TYPE = 'PHYSICAL']/mets:div/mets:div[@ORDER = '1']/@ID,
                         'type': 'Canvas'
                     }" />
             <!-- 
@@ -592,7 +898,7 @@ limitations under the License.
                     array {
                         for $i in 1 to count($divs)
                         return
-                            ddblabs:build-canvas($divs[$i], ., $serviceVersion, $serviceProfileLevel, $i)
+                            ddblabs:build-iiif-canvas($divs[$i], ., $serviceVersion, $serviceProfileLevel, $i)
                     }
                     " />
         </xsl:map>
