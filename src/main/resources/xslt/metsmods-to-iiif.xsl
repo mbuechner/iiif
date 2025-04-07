@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <xsl:stylesheet version="3.0" xmlns:array="http://www.w3.org/2005/xpath-functions/array" xmlns:ddblabs="https://labs.deutsche-digitale-bibliothek.de" xmlns:map="http://www.w3.org/2005/xpath-functions/map" xmlns:mets="http://www.loc.gov/METS/" xmlns:mix="http://www.loc.gov/mix/v20" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:oai="http://www.openarchives.org/OAI/2.0/" xmlns:saxon="http://saxon.sf.net/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-    <!-- <xsl:output encoding="UTF-8" indent="yes" method="json" saxon:property-order="@context id type label metadata summary requiredStatement rights provider items structures annotations thumbnail navDate homepage logo rendering seeAlso partOf start services" use-character-maps="no-escape-slash" /> -->
+    <!-- <xsl:output encoding="UTF-8" indent="yes" method="json" saxon:property-order="@context id type label metadata summary requiredStatement rights provider items structures annotations thumbnail navDate homepage logo rendering seeAlso partOf start services" use-character-maps="no-escape-slash" />  -->
     <xsl:output encoding="UTF-8" indent="yes" method="json" use-character-maps="no-escape-slash" />
     <xsl:strip-space elements="*" />
     <xsl:character-map name="no-escape-slash">
@@ -110,7 +110,7 @@ limitations under the License.
                                 'id': $providerUrl,
                                 'type': 'Text',
                                 'label': map {
-                                    'de': array {$orgXml/cortex/view/cortex-institution/name/text() || ' bei der DeutschenDigitalen Bibliothek'}
+                                    'de': array {$orgXml/cortex/view/cortex-institution/name/text() || ' bei der Deutschen Digitalen Bibliothek'}
                                 }
                             }
                         }" />
@@ -330,6 +330,13 @@ limitations under the License.
                                     'target': $itemUrl || '/canvas/' || $physId
                                 }
                             ]
+                        }
+                    ],
+                    'thumbnail': [
+                        map {
+                            'id': $serviceId || '/full/!300,300/0/default.jpg',
+                            'type': 'Image',
+                            'format': 'image/jpeg'
                         }
                     ]
                 }
