@@ -22,8 +22,8 @@ limitations under the License.
         <xsl:output-character character="/" string="/" />
     </xsl:character-map>
     <!-- Global parameters (these should be set from outside) -->
-    <xsl:param name="id" select="'TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
-    <xsl:param name="uri" select="'https://iiif.deutsche-digitale-bibliothek.de/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
+    <xsl:param name="itemId" select="'TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
+    <xsl:param name="itemUrl" select="'https://iiif.deutsche-digitale-bibliothek.de/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
     <xsl:param name="providerId" select="'BZVTR553HLJBDMQD5NCJ6YKP3HMBQRF4'" />
     <xsl:function as="xs:string" name="ddblabs:normalizeUrl">
         <!--
@@ -204,7 +204,7 @@ limitations under the License.
                         for $t in $targets
                         return
                             map {
-                                'id': $uri || '/canvas/' || $t,
+                                'id': $itemUrl || '/canvas/' || $t,
                                 'type': 'Canvas'
                                 (: optional: 'label': map { 'none': [string($label)] } :)
                             }
@@ -236,12 +236,12 @@ limitations under the License.
                 then
                     array:join(($child-items, $linked-canvases))
                 else
-                    array {$uri || '/range/' || $id}
+                    array {$itemUrl || '/range/' || $id}
                 " />
 
         <xsl:sequence select="
                 map {
-                    'id': $uri || '/range/' || $id,
+                    'id': $itemUrl || '/range/' || $id,
                     'type': 'Range',
                     'label': map {'none': [string($label)]},
                     'items': $all-items
@@ -274,8 +274,16 @@ limitations under the License.
 
         <!-- Bilddimensionen -->
         <xsl:variable name="mix" select="$root/mets:mets/mets:amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
-        <xsl:variable name="width"  select="if ($mix/mix:imageWidth/text()) then xs:integer($mix/mix:imageWidth) else 800" />
-        <xsl:variable name="height" select="if ($mix/mix:imageHeight/text()) then xs:integer($mix/mix:imageHeight) else 600" />
+        <xsl:variable name="width" select="
+                if ($mix/mix:imageWidth/text()) then
+                    xs:integer($mix/mix:imageWidth)
+                else
+                    800" />
+        <xsl:variable name="height" select="
+                if ($mix/mix:imageHeight/text()) then
+                    xs:integer($mix/mix:imageHeight)
+                else
+                    600" />
 
         <!-- Service-URL (ohne /info.json) -->
         <xsl:variable name="serviceId" select="replace($infoUrl, '/info\.json$', '')" />
@@ -292,17 +300,17 @@ limitations under the License.
         <!-- Zusammensetzen des Canvas-Objekts -->
         <xsl:sequence select="
                 map {
-                    'id': $uri || '/canvas/' || $physId,
+                    'id': $itemUrl || '/canvas/' || $physId,
                     'type': 'Canvas',
                     'height': $height,
                     'width': $width,
                     'items': [
                         map {
-                            'id': $uri || '/canvas/' || $physId || '/1',
+                            'id': $itemUrl || '/canvas/' || $physId || '/1',
                             'type': 'AnnotationPage',
                             'items': [
                                 map {
-                                    'id': $uri || '/canvas/' || $physId || '/annotation/1',
+                                    'id': $itemUrl || '/canvas/' || $physId || '/annotation/1',
                                     'type': 'Annotation',
                                     'motivation': 'painting',
                                     'body': map {
@@ -319,7 +327,7 @@ limitations under the License.
                                         'height': $height,
                                         'width': $width
                                     },
-                                    'target': $uri || '/canvas/' || $physId
+                                    'target': $itemUrl || '/canvas/' || $physId
                                 }
                             ]
                         }
@@ -385,7 +393,7 @@ limitations under the License.
             <!-- "@context": "http://iiif.io/api/presentation/3/context.json" -->
             <xsl:map-entry key="'@context'" select="'http://iiif.io/api/presentation/3/context.json'" />
             <!-- "id": "https://www.deutsche-digitale-bibliothek.de/item/WYSPZ4UGJYOETW5F7EFHLR3GRQODFKCD" -->
-            <xsl:map-entry key="'id'" select="$uri" />
+            <xsl:map-entry key="'id'" select="$itemUrl" />
             <!-- "type": "Manifest", -->
             <xsl:map-entry key="'type'" select="'Manifest'" />
             <!-- 
@@ -483,7 +491,7 @@ limitations under the License.
             <xsl:map-entry key="'homepage'" select="
                     array {
                         map {
-                            'id': 'https://www.deutsche-digitale-bibliothek.de/item/' || $id,
+                            'id': 'https://www.deutsche-digitale-bibliothek.de/item/' || $itemId,
                             'type': 'Text',
                             'label': map {
                                 'de': array {'Deutsche Digitale Bibliothek'},
@@ -505,7 +513,7 @@ limitations under the License.
             <xsl:map-entry key="'seeAlso'" select="
                     array {
                         map {
-                            'id': 'https://api.deutsche-digitale-bibliothek.de/2/items/' || $id,
+                            'id': 'https://api.deutsche-digitale-bibliothek.de/2/items/' || $itemId,
                             'type': 'Dataset',
                             'format': 'application/xml',
                             'profile': 'https://www.deutsche-digitale-bibliothek.de/ns/cortex'
@@ -519,7 +527,7 @@ limitations under the License.
             -->
             <xsl:map-entry key="'start'" select="
                     map {
-                        'id': $uri || '/canvas/' || //mets:mets/mets:structMap/mets:div/mets:div[@ORDER = '1']/@ID,
+                        'id': $itemUrl || '/canvas/' || //mets:mets/mets:structMap/mets:div/mets:div[@ORDER = '1']/@ID,
                         'type': 'Canvas'
                     }" />
             <!-- 
