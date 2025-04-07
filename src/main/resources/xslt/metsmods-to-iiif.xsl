@@ -274,8 +274,8 @@ limitations under the License.
 
         <!-- Bilddimensionen -->
         <xsl:variable name="mix" select="$root/mets:mets/mets:amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
-        <xsl:variable name="width"  select="if ($mix/mix:imageWidth) then xs:integer($mix/mix:imageWidth) else 800" />
-        <xsl:variable name="height" select="if ($mix/mix:imageHeight) then xs:integer($mix/mix:imageHeight) else 600" />
+        <xsl:variable name="width"  select="if ($mix/mix:imageWidth/text()) then xs:integer($mix/mix:imageWidth) else 800" />
+        <xsl:variable name="height" select="if ($mix/mix:imageHeight/text()) then xs:integer($mix/mix:imageHeight) else 600" />
 
         <!-- Service-URL (ohne /info.json) -->
         <xsl:variable name="serviceId" select="replace($infoUrl, '/info\.json$', '')" />
