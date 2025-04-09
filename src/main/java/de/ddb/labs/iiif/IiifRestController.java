@@ -86,7 +86,7 @@ class IiifRestController {
     private final Logger LOG = LoggerFactory.getLogger(IiifRestController.class);
     private final OkHttpClient httpClient;
     private final DocumentBuilder db;
-    private final XPathExpression checkExpr, recordExpr, oaiRecord, providerIdExpr;
+    private final XPathExpression checkExpr, recordExpr, oaiRecord, providerInfoExpr;
     private final TransformerFactory factory;
 
     @Value("${iiif.baseurl}")
@@ -142,7 +142,7 @@ class IiifRestController {
                 return switch (prefix) {
                     case "cortex" ->
                         "http://www.deutsche-digitale-bibliothek.de/cortex";
-                    case "ns14" ->
+                    case "source" ->
                         "http://www.deutsche-digitale-bibliothek.de/ns/cortex-item-source";
                     case "oai" ->
                         "http://www.openarchives.org/OAI/2.0/";
@@ -162,10 +162,10 @@ class IiifRestController {
             }
         });
 
-        checkExpr = xpath.compile("/cortex:cortex/ns14:source/ns14:record/@type");
-        recordExpr = xpath.compile("/cortex:cortex/ns14:source/ns14:record");
+        checkExpr = xpath.compile("/cortex:cortex/source:source/source:record/@type");
+        recordExpr = xpath.compile("/cortex:cortex/source:source/source:record");
         oaiRecord = xpath.compile("/oai:record/oai:metadata");
-        providerIdExpr = xpath.compile("/cortex:cortex/cortex:provider-info/cortex:provider-ddb-id");
+        providerInfoExpr = xpath.compile("/cortex:cortex/cortex:provider-info");
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -247,7 +247,7 @@ class IiifRestController {
 
                 if ("http://www.loc.gov/METS/".equalsIgnoreCase(typeValue)) {
                     LOG.info("METS-Typ erkannt – Transformation startet...");
-                    final String providerId = (String) providerIdExpr.evaluate(doc, XPathConstants.STRING);
+                    final Node providerInfo = (Node) providerInfoExpr.evaluate(doc, XPathConstants.NODE);
 
                     // Maskierten Inhalt extrahieren                   
                     final Element recordElement = (Element) recordExpr.evaluate(doc, XPathConstants.NODE);
@@ -264,7 +264,7 @@ class IiifRestController {
                     final Transformer transformer01 = templatesMetsmodsToIiif.newTransformer();
                     transformer01.setParameter("itemId", id);
                     transformer01.setParameter("itemUrl", baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter));
-                    transformer01.setParameter("providerId", providerId);
+                    transformer01.setParameter("providerInfo", providerInfo);
 
                     transformer01.transform(new DOMSource(metsDoc), result);
 
