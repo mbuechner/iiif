@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <xsl:stylesheet version="3.0" xmlns:array="http://www.w3.org/2005/xpath-functions/array" xmlns:cortex="http://www.deutsche-digitale-bibliothek.de/cortex" xmlns:ddblabs="https://labs.deutsche-digitale-bibliothek.de" xmlns:map="http://www.w3.org/2005/xpath-functions/map" xmlns:mets="http://www.loc.gov/METS/" xmlns:mix="http://www.loc.gov/mix/v20" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:oai="http://www.openarchives.org/OAI/2.0/" xmlns:saxon="http://saxon.sf.net/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-    <!-- <xsl:output encoding="UTF-8" indent="yes" method="json" saxon:property-order="@context id type label metadata summary requiredStatement rights provider items structures annotations thumbnail navDate homepage logo rendering seeAlso partOf start services" use-character-maps="no-escape-slash" />  -->
+    <!-- <xsl:output encoding="UTF-8" indent="yes" method="json" saxon:property-order="@context id type label metadata summary requiredStatement rights provider items structures annotations thumbnail navDate homepage logo rendering seeAlso partOf start services" use-character-maps="no-escape-slash" /> -->
     <xsl:output encoding="UTF-8" indent="yes" method="json" use-character-maps="no-escape-slash" />
     <xsl:strip-space elements="*" />
     <xsl:character-map name="no-escape-slash">
@@ -37,18 +37,23 @@ limitations under the License.
             then
                 'IIIF'
             else
-                'DEFAULT'
+                if (exists(/mets:mets/mets:fileSec/mets:fileGrp[mets:file/mets:FLocat[ends-with(@xlink:href, '/full/max/0/default.jpg') or ends-with(@xlink:href, '/full/full/0/default.jpg')]]))
+                then
+                    'IIIF'
+                else
+                    'DEFAULT'
             " />
     <xsl:variable as="xs:string" name="preferredFileGrp" select="
-            if ($mode = 'IIIF')
+            if ($mode = 'IIIF' and string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']][1]/@USE))
             then
                 string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']][1]/@USE)
             else
-                if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'MAX'])) then
-                    'MAX'
+                if ($mode = 'IIIF' and string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file/mets:FLocat[ends-with(@xlink:href, '/full/max/0/default.jpg') or ends-with(@xlink:href, '/full/full/0/default.jpg')]][1]/@USE))
+                then
+                    string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file/mets:FLocat[ends-with(@xlink:href, '/full/max/0/default.jpg') or ends-with(@xlink:href, '/full/full/0/default.jpg')]][1]/@USE)
                 else
-                    if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'PRESENTATION'])) then
-                        'PRESENTATION'
+                    if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'MAX'])) then
+                        'MAX'
                     else
                         if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'DEFAULT'])) then
                             'DEFAULT'
@@ -70,7 +75,7 @@ limitations under the License.
                         else
                             'ERROR'" />
 
-    <xsl:function as="xs:string" name="ddblabs:normalizeUrl">
+    <xsl:function as="xs:string" name="ddblabs:normalize-url">
         <!--
         Funktion: ddblabs:normalizeUrl
         Beschreibung: Entfernt den abschließenden Schrägstrich von einer URL, falls vorhanden.
@@ -81,9 +86,9 @@ limitations under the License.
             ddblabs:normalizeUrl('http://example.com/') gibt 'http://example.com' zurück.
         -->
         <xsl:param as="xs:string" name="url" />
-        <xsl:sequence select="replace($url, '/$', '')" />
+        <xsl:sequence select="replace(normalize-space($url), '/$', '')" />
     </xsl:function>
-    <xsl:function as="xs:string" name="ddblabs:generateLink">
+    <xsl:function as="xs:string" name="ddblabs:generate-link">
         <!--
         Funktion: ddblabs:generateLink
         Beschreibung: Erstellt einen HTML-Link (<a>-Tag) aus einem angegebenen Text und einer URL.
@@ -106,6 +111,27 @@ limitations under the License.
                 else
                     ''" />
         <xsl:sequence select="concat('&lt;a href=&quot;', $url, '&quot;', $targetAttr, '&gt;', $text, '&lt;/a&gt;')" />
+    </xsl:function>
+    <xsl:function as="xs:string" name="ddblabs:iiif-base-url">
+        <xsl:param as="xs:string" name="url" />
+        <xsl:variable as="xs:string" name="cleanUrl" select="ddblabs:normalize-url($url)" />
+        <!-- 
+            Gibt die Basis-URL eines IIIF Image API-Aufrufs zurück, d. h. die URL bis einschließlich Identifier.
+            
+            Funktion deckt folgende Fälle ab:
+            1. URL endet mit /info.json → entfernt /info.json
+            2. URL endet mit /.../default.format → entfernt region/size/rotation/default.format
+            3. URL ist bereits die Basis mit Identifier → wird unverändert zurückgegeben
+        -->
+        <xsl:sequence select="
+                if (ends-with($cleanUrl, '/info.json')) then
+                    replace($cleanUrl, '/info\.json$', '')
+                else
+                    if (matches($cleanUrl, '/[^/]+/[^/]+/[^/]+/default\.\w+$')) then
+                        replace($cleanUrl, '^(https?://[^/]+/[^/]+/.+?)/[^/]+/[^/]+/[^/]+/default\.\w+$', '$1')
+                    else
+                        $cleanUrl
+                " />
     </xsl:function>
     <xsl:function as="map(*)" name="ddblabs:transform-div">
         <!--
@@ -234,8 +260,7 @@ limitations under the License.
                     600" />
 
         <!-- Volltexte holen -->
-        <xsl:variable as="xs:string" name="fileId" select="string($root/mets:mets/mets:structMap/mets:div/mets:div[@ID = 'phys10885302']/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID)" />
-        <xsl:message select="$fileId" />
+        <xsl:variable as="xs:string" name="fileId" select="string($root/mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID)" />
         <xsl:variable as="xs:string" name="fulltextUrl" select="
                 if ($fileId != '')
                 then
@@ -243,7 +268,6 @@ limitations under the License.
                 else
                     ''" />
 
-        <xsl:message select="$fulltextUrl" />
         <!-- Zusammensetzen des Canvas-Objekts -->
         <xsl:sequence select="
                 map:merge((
@@ -331,7 +355,7 @@ limitations under the License.
         <!-- Hole passende IIIF-Datei -->
         <xsl:variable name="iiifFile" select="$root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredFileGrp]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr/@FILEID]" />
         <xsl:variable name="fileId" select="string($iiifFile/@ID)" />
-        <xsl:variable name="infoUrl" select="string($iiifFile/mets:FLocat/@xlink:href)" />
+        <xsl:variable name="baseUrl" select="ddblabs:iiif-base-url(string($iiifFile/mets:FLocat/@xlink:href))" />
 
         <!-- Bilddimensionen -->
         <xsl:variable name="mix" select="$root/mets:mets/mets:amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
@@ -346,9 +370,6 @@ limitations under the License.
                 else
                     600" />
 
-        <!-- Service-URL (ohne /info.json) -->
-        <xsl:variable name="serviceId" select="replace($infoUrl, '/info\.json$', '')" />
-
         <!-- Suffix -->
         <xsl:variable name="urlSuffix" select="
                 if ($serviceVersion = '3')
@@ -359,8 +380,7 @@ limitations under the License.
                 " />
 
         <!-- Volltexte holen -->
-        <xsl:variable as="xs:string" name="fileId" select="string($root/mets:mets/mets:structMap/mets:div/mets:div[@ID = 'phys10885302']/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID)" />
-        <xsl:message select="$fileId" />
+        <xsl:variable as="xs:string" name="fileId" select="string($root/mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID)" />
         <xsl:variable as="xs:string" name="fulltextUrl" select="
                 if ($fileId != '')
                 then
@@ -385,12 +405,12 @@ limitations under the License.
                                     'type': 'Annotation',
                                     'motivation': 'painting',
                                     'body': map {
-                                        'id': $serviceId || $urlSuffix,
+                                        'id': $baseUrl || $urlSuffix,
                                         'type': 'Image',
                                         'format': 'image/jpeg',
                                         'service': [
                                             map {
-                                                'id': $serviceId,
+                                                'id': $baseUrl,
                                                 'type': 'ImageService' || $serviceVersion,
                                                 'profile': $serviceProfileLevel
                                             }
@@ -414,19 +434,19 @@ limitations under the License.
                     },
                     'thumbnail': [
                         map {
-                            'id': $serviceId || '/full/!300,300/0/default.jpg',
+                            'id': $baseUrl || '/full/!300,300/0/default.jpg',
                             'type': 'Image',
                             'format': 'image/jpeg',
                             'service': [
                                 map {
-                                    'id': $serviceId,
+                                    'id': $baseUrl,
                                     'type': 'ImageService' || $serviceVersion,
                                     'profile': $serviceProfileLevel
                                 }
                             ]
                         }
                     ]
-                },                
+                },
                 if ($fulltextUrl != '')
                 then
                     map {
@@ -446,6 +466,7 @@ limitations under the License.
                 " />
     </xsl:function>
     <xsl:template match="/">
+        <xsl:message select="'Start to transform ID ' || $itemId" />
         <xsl:choose>
             <xsl:when test="$mode = 'IIIF'">
                 <xsl:apply-templates mode="iiif" select="/" />
@@ -475,7 +496,7 @@ limitations under the License.
             -->
         <xsl:map-entry key="'label'" select="
                 map {
-                    'de': array {string(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:relatedItem/mods:titleInfo/mods:title)}
+                    'de': array {/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:relatedItem/mods:titleInfo/mods:title/text()}
                 }" />
         <!--
             "viewingDirection": "left-to-right",
@@ -515,7 +536,7 @@ limitations under the License.
                     },
                     'value': map {
                         'none': array {
-                            ddblabs:generateLink(
+                            ddblabs:generate-link(
                             if (exists(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']))
                             then
                                 string(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']/mods:publisher[1])
@@ -528,47 +549,44 @@ limitations under the License.
                 }" />
 
         <!-- provider -->
-        <xsl:map-entry key="'provider'">
-            <!--
-          "provider": [
-            {
-            ...
-            }
-          ],    
+        <!-- 
+          "provider": {
+            "id": "https://www.deutsche-digitale-bibliothek.de/organization/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
+            "type": "Agent",
+            "label": { "none":[ "MyProvider" ] },
+            "homepage": [ {
+                "id": "https://www.example.org",
+                "type": "Text",
+                "label": { "none":[ "MyProvider" ] },
+                "format": "text/html"
+              } ],
+            "logo": [ {
+                "id": "https://www.example.org/logo.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "height": 600,
+                "width": 800
+              } ],
+            "seeAlso": [ {
+                "id": "https://www.deutsche-digitale-bibliothek.de/organization/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
+                "type": "Text",
+                "label": { "de":[ "MyProvider bei der Deutschen Digitalen Bibliothek" ] }
+              } ]
+          },
         -->
-            <xsl:sequence>
-                <xsl:map>
-                    <!-- "id": "https://www.deutsche-digitale-bibliothek.de/organization/EGCA66RQCQZMVMLIFI74MXN4PU2Q6AF3", -->
-                    <xsl:map-entry key="'id'" select="'https://www.deutsche-digitale-bibliothek.de/organization/' || string($providerInfo/cortex:provider-ddb-id)" />
-                    <!-- "type": "Agent", -->
-                    <xsl:map-entry key="'type'" select="'Agent'" />
-                    <!-- 
-                "label": {
-                    "none": [
-                        "Peter Tamm Sen. Stiftung"
-                    ]
-                },
-                -->
-                    <xsl:map-entry key="'label'" select="
-                            map {
+        <xsl:map-entry key="'provider'">
+            <xsl:sequence select="
+                    array {
+                        map:merge((
+                        map {
+                            'id': 'https://www.deutsche-digitale-bibliothek.de/organization/' || string($providerInfo/cortex:provider-ddb-id),
+                            'type': 'Agent',
+                            'label': map {
                                 'none': array {string($providerInfo/cortex:provider-name)}
-                            }" />
-                    <!-- 
-                  "seeAlso": [
-                    {
-                      "id": "https://www.deutsche-digitale-bibliothek.de/organization/EGCA66RQCQZMVMLIFI74MXN4PU2Q6AF3",
-                      "type": "Text",
-                      "label": {
-                        "de": [
-                          "Peter Tamm Sen. Stiftung bei der Deutschen Digitalen Bibliothek"
-                        ]
-                      },
-                      "format": "text/html"
-                    }
-                  ],
-                -->
-                    <xsl:map-entry key="'seeAlso'" select="
-                            array {
+                            }
+                        },
+                        map {
+                            'seeAlso': array {
                                 map {
                                     'id': 'https://www.deutsche-digitale-bibliothek.de/organization/' || string($providerInfo/cortex:provider-ddb-id),
                                     'type': 'Text',
@@ -576,57 +594,32 @@ limitations under the License.
                                         'de': array {string($providerInfo/cortex:provider-name) || ' bei der Deutschen Digitalen Bibliothek'}
                                     }
                                 }
-                            }" />
-                    <!-- 
-                  "logo": [
-                     {
-                       "id": "https://iiif.deutsche-digitale-bibliothek.de/image/2/8d4a9cf5-7309-47c9-a8e9-d2f6958add47/full/full/0/default.jpg",
-                       "type": "Image",
-                       "format": "image/jpg",
-                       "service": [
-                         {
-                           "id": "https://iiif.deutsche-digitale-bibliothek.de/image/2/8d4a9cf5-7309-47c9-a8e9-d2f6958add47",
-                           "type": "ImageService2",
-                           "profile": "level2"
-                         }
-                       ]
-                     }
-                   ],                
-                -->
-                    <xsl:if test="string($providerInfo/cortex:provider-logo)">
-                        <xsl:map-entry key="'logo'" select="
-                                array {
+                            }
+                        },
+                        if (string($providerInfo/cortex:provider-logo)) then
+                            map {
+                                'logo': array {
                                     map {
                                         'id': string($providerInfo/cortex:provider-logo),
                                         'type': 'Image',
+                                        'width': 800,
+                                        'height': 600,
                                         'format':
-                                        if (matches(string($providerInfo/cortex:provider-logo), '\.jpe?g$', 'i')) then
+                                        if (matches($providerInfo/cortex:provider-logo, '\.jpe?g$', 'i')) then
                                             'image/jpeg'
                                         else
-                                            if (ends-with(lower-case(string($providerInfo/cortex:provider-logo)), '.png')) then
+                                            if (ends-with(lower-case($providerInfo/cortex:provider-logo), '.png')) then
                                                 'image/png'
                                             else
                                                 'application/octet-stream'
                                     }
-                                }" />
-                    </xsl:if>
-                    <!-- 
-                  "homepage": [
-                    {
-                      "id": "https://www.imm-hamburg.de/",
-                      "type": "Text",
-                      "label": {
-                        "none": [
-                          "Peter Tamm Sen. Stiftung"
-                        ]
-                      },
-                      "format": "text/html"
-                    }
-                  ]
-                -->
-                    <xsl:if test="string($providerInfo/cortex:provider-uri) and string($providerInfo/cortex:provider-name)">
-                        <xsl:map-entry key="'homepage'" select="
-                                array {
+                                }
+                            }
+                        else
+                            (),
+                        if (string($providerInfo/cortex:provider-uri) and string($providerInfo/cortex:provider-name)) then
+                            map {
+                                'homepage': array {
                                     map {
                                         'id': string($providerInfo/cortex:provider-uri),
                                         'type': 'Text',
@@ -635,11 +628,15 @@ limitations under the License.
                                         },
                                         'format': 'text/html'
                                     }
-                                }" />
-                    </xsl:if>
-                </xsl:map>
-            </xsl:sequence>
+                                }
+                            }
+                        else
+                            ()
+                        ))
+                    }
+                    " />
         </xsl:map-entry>
+
         <!-- 
               "homepage": [
                 {
@@ -771,7 +768,8 @@ limitations under the License.
         </xsl:map>
     </xsl:template>
     <xsl:template match="/" mode="iiif">
-        <xsl:variable name="serviceJson" select="json-doc(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrp]/mets:file[1]/mets:FLocat/@xlink:href))" />
+        <xsl:variable name="firstImageUrl" select="ddblabs:iiif-base-url(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrp]/mets:file[1]/mets:FLocat/@xlink:href))" />
+        <xsl:variable name="serviceJson" select="json-doc($firstImageUrl || '/info.json')" />
         <xsl:variable name="serviceVersion">
             <xsl:choose>
                 <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/1/context.json'">1</xsl:when>
@@ -789,7 +787,7 @@ limitations under the License.
             </xsl:choose>
         </xsl:variable>
         <xsl:map>
-
+            <xsl:apply-templates mode="common" select="." />
             <!--
             "thumbnail": [{
                "id": "https://iiif.deutsche-digitale-bibliothek.de/image/2/475edf69-a029-46cb-a165-c331a59e02a6/full/200,/0/default.jpg",
@@ -802,15 +800,16 @@ limitations under the License.
                }]
             }],
             -->
+            <xsl:variable as="xs:string" name="thumb" select="ddblabs:iiif-base-url(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails][1]/mets:file[1]/mets:FLocat/@xlink:href))" />
             <xsl:map-entry key="'thumbnail'" select="
                     array {
                         map {
-                            'id': ddblabs:normalizeUrl(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails][1]/mets:file[1]/mets:FLocat/@xlink:href)) || '/full/!300,300/0/default.jpg',
+                            'id': $thumb || '/full/!300,300/0/default.jpg',
                             'type': 'Image',
                             'format': 'image/jpeg',
                             'service': array {
                                 map {
-                                    'id': string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails][1]/mets:file[1]/mets:FLocat/@xlink:href),
+                                    'id': $thumb,
                                     'type': 'ImageService' || $serviceVersion,
                                     'profile': $serviceProfileLevel
                                 }
