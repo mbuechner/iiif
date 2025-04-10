@@ -11,5 +11,5 @@ ENV IIIF.PORT=8080
 RUN mkdir /opt/iiif
 WORKDIR /opt/iiif
 COPY --from=mchain /tmp/target/iiif.jar iiif.jar
-CMD ["java", "-Xms256M", "-Xmx512G", "-jar", "iiif.jar"]
+CMD ["java", "-Xms4G", "-Xmx8G", "-jar", "iiif.jar"]
 EXPOSE 8080
