@@ -60,12 +60,13 @@ limitations under the License.
                         else
                             'ERROR'" />
     <xsl:variable as="xs:string" name="preferredFileGrpForThumbnails" select="
-            if ($mode = 'IIIF')
+            if ($mode = 'IIIF' and string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']][1]/@USE))
             then
                 string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']][1]/@USE)
             else
-                if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'THUMBS'])) then
-                    'THUMBS'
+                if ($mode = 'IIIF' and string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file/mets:FLocat[ends-with(@xlink:href, '/full/max/0/default.jpg') or ends-with(@xlink:href, '/full/full/0/default.jpg')]][1]/@USE))
+                then
+                    string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file/mets:FLocat[ends-with(@xlink:href, '/full/max/0/default.jpg') or ends-with(@xlink:href, '/full/full/0/default.jpg')]][1]/@USE)
                 else
                     if (exists(/mets:mets/mets:fileSec/mets:fileGrp[@USE = 'MIN'])) then
                         'MIN'
@@ -226,7 +227,6 @@ limitations under the License.
         <xsl:variable name="physId" select="$physDiv/@ID" />
 
         <!-- Hole passende IIIF-Datei -->
-        <!-- TODO (in IIIF verbessern) -->
         <xsl:variable name="iiifFile" select="$root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredFileGrp]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr/@FILEID]" />
         <xsl:variable name="fileId" select="string($iiifFile/@ID)" />
         <xsl:variable name="fileUrl" select="string($iiifFile/mets:FLocat/@xlink:href)" />
@@ -328,7 +328,7 @@ limitations under the License.
                         ]
                     }
                 else
-                    ()
+                    map {}
                 ))
                 " />
     </xsl:function>
@@ -461,7 +461,7 @@ limitations under the License.
                         ]
                     }
                 else
-                    ()
+                    map {}
                 ))
                 " />
     </xsl:function>
@@ -616,7 +616,7 @@ limitations under the License.
                                 }
                             }
                         else
-                            (),
+                            map {},
                         if (string($providerInfo/cortex:provider-uri) and string($providerInfo/cortex:provider-name)) then
                             map {
                                 'homepage': array {
@@ -631,7 +631,7 @@ limitations under the License.
                                 }
                             }
                         else
-                            ()
+                            map {}
                         ))
                     }
                     " />
@@ -816,7 +816,6 @@ limitations under the License.
                             }
                         }
                     }" />
-
             <!-- 
             "items": [
                 {
