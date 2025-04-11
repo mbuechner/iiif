@@ -16,49 +16,43 @@
 package de.ddb.labs.iiif;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
-import javax.xml.XMLConstants;
-import javax.xml.namespace.NamespaceContext;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Templates;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.sax.SAXResult;
-import javax.xml.transform.sax.SAXTransformerFactory;
-import javax.xml.transform.sax.TransformerHandler;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.saxon.xpath.XPathFactoryImpl;
+import net.sf.saxon.s9api.DocumentBuilder;
+import net.sf.saxon.s9api.Processor;
+import net.sf.saxon.s9api.QName;
+import net.sf.saxon.s9api.SaxonApiException;
+import net.sf.saxon.s9api.Serializer;
+import net.sf.saxon.s9api.XPathCompiler;
+import net.sf.saxon.s9api.XPathExecutable;
+import net.sf.saxon.s9api.XPathSelector;
+import net.sf.saxon.s9api.XdmAtomicValue;
+import net.sf.saxon.s9api.XdmDestination;
+import net.sf.saxon.s9api.XdmItem;
+import net.sf.saxon.s9api.XdmNode;
+import net.sf.saxon.s9api.XdmNodeKind;
+import net.sf.saxon.s9api.XsltCompiler;
+import net.sf.saxon.s9api.XsltExecutable;
+import net.sf.saxon.s9api.XsltTransformer;
 import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,11 +61,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
 @CrossOrigin(origins = "*", allowedHeaders = "*", maxAge = 3600)
@@ -85,9 +75,10 @@ class IiifRestController {
 
     private final Logger LOG = LoggerFactory.getLogger(IiifRestController.class);
     private final OkHttpClient httpClient;
+    private final Processor processor;
     private final DocumentBuilder db;
-    private final XPathExpression checkExpr, recordExpr, oaiRecord, providerInfoExpr;
-    private final TransformerFactory factory;
+    private final XsltCompiler compiler;
+    private final XPathExecutable checkExpr, recordExpr, oaiRecord, providerInfoExpr;
 
     @Value("${iiif.baseurl}")
     private String baseUrl;
@@ -103,17 +94,17 @@ class IiifRestController {
 
     @Value("classpath:xslt/cortex-to-iiif.xsl")
     private Resource cortexToIiif;
-    private Templates templatesCortexToIiif;
+    private XsltExecutable templatesCortexToIiif;
 
     @Value("classpath:xslt/xml-to-json.xsl")
     private Resource xmlToJson;
-    private Templates templatesXmlToJson;
+    private XsltExecutable templatesXmlToJson;
 
     @Value("classpath:xslt/metsmods-to-iiif.xsl")
     private Resource metsmodsToIiif;
-    private Templates templatesMetsmodsToIiif;
+    private XsltExecutable templatesMetsmodsToIiif;
 
-    public IiifRestController() throws URISyntaxException, IOException, ParserConfigurationException, XPathExpressionException {
+    public IiifRestController() throws URISyntaxException, IOException, SaxonApiException {
         final Dispatcher dispatcher = new Dispatcher();
         dispatcher.setMaxRequests(64);
         dispatcher.setMaxRequestsPerHost(8);
@@ -123,44 +114,17 @@ class IiifRestController {
                 .dispatcher(dispatcher)
                 .build();
 
-        factory = new net.sf.saxon.TransformerFactoryImpl();
-        // URIResolver setzen
-        factory.setURIResolver(new CustomResolver());
+        processor = new Processor(true); // XSLT 3.0 fähig
+        compiler = processor.newXsltCompiler();
 
         // XML-Dokument parsen
-        final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        dbf.setNamespaceAware(true);
-        db = dbf.newDocumentBuilder();
+        db = processor.newDocumentBuilder();
 
         // XPath-Factory und Kontext mit Präfixen
-        final XPathFactory xpf = new XPathFactoryImpl();
-        final XPath xpath;
-        xpath = xpf.newXPath();
-        xpath.setNamespaceContext(new NamespaceContext() {
-            @Override
-            public String getNamespaceURI(String prefix) {
-                return switch (prefix) {
-                    case "cortex" ->
-                        "http://www.deutsche-digitale-bibliothek.de/cortex";
-                    case "source" ->
-                        "http://www.deutsche-digitale-bibliothek.de/ns/cortex-item-source";
-                    case "oai" ->
-                        "http://www.openarchives.org/OAI/2.0/";
-                    default ->
-                        XMLConstants.NULL_NS_URI;
-                };
-            }
-
-            @Override
-            public String getPrefix(String namespaceURI) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public Iterator<String> getPrefixes(String namespaceURI) {
-                throw new UnsupportedOperationException();
-            }
-        });
+        final XPathCompiler xpath = processor.newXPathCompiler();
+        xpath.declareNamespace("cortex", "http://www.deutsche-digitale-bibliothek.de/cortex");
+        xpath.declareNamespace("source", "http://www.deutsche-digitale-bibliothek.de/ns/cortex-item-source");
+        xpath.declareNamespace("oai", "http://www.openarchives.org/OAI/2.0/");
 
         checkExpr = xpath.compile("/cortex:cortex/source:source/source:record/@type");
         recordExpr = xpath.compile("/cortex:cortex/source:source/source:record");
@@ -169,47 +133,35 @@ class IiifRestController {
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void doSomethingAfterStartup() throws TransformerConfigurationException, IOException {
+    public void doSomethingAfterStartup() throws IOException, SaxonApiException {
 
         final StreamSource ss01 = new StreamSource(cortexToIiif.getInputStream());
         final StreamSource ss02 = new StreamSource(xmlToJson.getInputStream());
         final StreamSource ss03 = new StreamSource(metsmodsToIiif.getInputStream());
 
-        templatesCortexToIiif = factory.newTemplates(ss01);
-        templatesXmlToJson = factory.newTemplates(ss02);
-        templatesMetsmodsToIiif = factory.newTemplates(ss03);
+        templatesCortexToIiif = compiler.compile(ss01);
+        templatesXmlToJson = compiler.compile(ss02);
+        templatesMetsmodsToIiif = compiler.compile(ss03);
     }
 
-    public Document maybeReplaceWithMetadata(Document doc) throws Exception {
+    public XdmNode maybeReplaceWithMetadata(XdmNode docNode) throws SaxonApiException {
 
-        // <metadata> finden
-        final Node metadataNode = (Node) oaiRecord.evaluate(doc, XPathConstants.NODE);
+        // XPath anwenden
+        XPathSelector selector = oaiRecord.load();
+        selector.setContextItem(docNode);
+        XdmItem metadataItem = selector.evaluateSingle();
 
-        if (metadataNode != null && metadataNode.hasChildNodes()) {
-            // Ersten Inhalt (z. B. <newroot>) aus <metadata> holen
-            Node newContent = null;
-            for (int i = 0; i < metadataNode.getChildNodes().getLength(); i++) {
-                Node child = metadataNode.getChildNodes().item(i);
-                if (child.getNodeType() == Node.ELEMENT_NODE) {
-                    newContent = child;
-                    break;
+        if (metadataItem instanceof XdmNode metadataNode) {
+            for (XdmNode child : metadataNode.children()) {
+                if (child.getNodeKind() == XdmNodeKind.ELEMENT) {
+                    // Ersten Element-Child gefunden → als neues Dokument zurückgeben
+                    return db.build(new StreamSource(new StringReader(child.toString())));
                 }
-            }
-
-            if (newContent != null) {
-                // Neues leeres Dokument bauen
-                Document newDoc = db.newDocument();
-
-                // Element importieren und als Wurzel setzen
-                Node imported = newDoc.importNode(newContent, true);
-                newDoc.appendChild(imported);
-
-                return newDoc;
             }
         }
 
-        // Keine <metadata> oder leer → Original-Dokument zurückgeben
-        return doc;
+        // Kein <oai:metadata> oder keine Kindelemente → Original zurück
+        return docNode;
     }
 
     @RequestMapping(
@@ -218,7 +170,7 @@ class IiifRestController {
             value = "/{id}"
     )
     @ResponseBody
-    public ResponseEntity<String> getResource(HttpServletRequest request, @PathVariable String id, @RequestParam(value = "system", required = false) String system) throws FileNotFoundException, IOException, TransformerConfigurationException, TransformerException, SAXException, XPathExpressionException, Exception {
+    public ResponseEntity<StreamingResponseBody> getResource(HttpServletRequest request, @PathVariable String id, @RequestParam(value = "system", required = false) String system) throws FileNotFoundException, IOException {
 
         String requestUrl;
 
@@ -236,67 +188,90 @@ class IiifRestController {
                 .get()
                 .build();
 
-        try (final Response response = httpClient.newCall(getRequest).execute()) {
-            if (response.isSuccessful()) {
+        final String queryParameter = request.getQueryString();
+        final String itemUrl = baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter);
 
-                final String inputXmlString = response.body().string();
-                final Document doc = db.parse(new InputSource(new StringReader(inputXmlString)));
+        final StreamingResponseBody stream = outputStream -> {
+            try {
+                final Response response = httpClient.newCall(getRequest).execute();
+                if (response.isSuccessful()) {
 
-                final String typeValue = (String) checkExpr.evaluate(doc, XPathConstants.STRING);
-                final String queryParameter = request.getQueryString();
+                    final XdmNode doc = db.build(new StreamSource(response.body().source().inputStream()));
 
-                if ("http://www.loc.gov/METS/".equalsIgnoreCase(typeValue)) {
-                    LOG.info("METS-Typ erkannt – Transformation startet...");
-                    final Node providerInfo = (Node) providerInfoExpr.evaluate(doc, XPathConstants.NODE);
+                    final StringWriter stringWriter = new StringWriter();
+                    final Serializer ss = processor.newSerializer(stringWriter);
+                    ss.setOutputProperty(Serializer.Property.METHOD, "xml");
+                    ss.setOutputProperty(Serializer.Property.INDENT, "yes");
 
-                    // Maskierten Inhalt extrahieren                   
-                    final Element recordElement = (Element) recordExpr.evaluate(doc, XPathConstants.NODE);
-                    final String maskedXml = recordElement.getTextContent().trim();
+                    // 3. Schreiben
+                    ss.serializeNode(doc);
 
-                    // Inhalt demaskieren: als neues DOM laden
-                    Document metsDoc = db.parse(new ByteArrayInputStream(maskedXml.getBytes(StandardCharsets.UTF_8)));
-                    metsDoc = maybeReplaceWithMetadata(metsDoc);
+                    final XPathSelector typeSelector = checkExpr.load();
+                    typeSelector.setContextItem(doc);
 
-                    // Transformation
-                    final StringWriter writer = new StringWriter();
-                    final StreamResult result = new StreamResult(writer);
+                    final XdmItem result = typeSelector.evaluateSingle();
+                    final String typeValue = result != null ? result.getStringValue() : "";
 
-                    final Transformer transformer01 = templatesMetsmodsToIiif.newTransformer();
-                    transformer01.setParameter("itemId", id);
-                    transformer01.setParameter("itemUrl", baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter));
-                    transformer01.setParameter("providerInfo", providerInfo);
+                    if ("http://www.loc.gov/METS/".equalsIgnoreCase(typeValue)) {
 
-                    transformer01.transform(new DOMSource(metsDoc), result);
+                        // METS/MODS     
+                        final XPathSelector metsModsSelector = recordExpr.load();
+                        metsModsSelector.setContextItem(doc);
 
-                    return ResponseEntity
-                            .ok()
-                            .header("Content-Type", "application/json")
-                            .body(writer.toString());
-                } else {
+                        final XdmItem recordItem = metsModsSelector.evaluateSingle();
+                        final String metModsXml = recordItem.getStringValue().trim();
 
-                    LOG.info("Kein METS-Typ erkannt – Transformation startet...");
-                    final StringWriter writer = new StringWriter();
-                    final StreamResult result = new StreamResult(writer);
+                        final XdmNode metModsDoc = db.build(new StreamSource(new StringReader(metModsXml)));
 
-                    final Transformer transformer01 = templatesCortexToIiif.newTransformer();
-                    transformer01.setParameter("uri", baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter));
+                        // Provider
+                        final XPathSelector providerSelector = providerInfoExpr.load();
+                        providerSelector.setContextItem(doc);
+                        final XdmItem providerItem = providerSelector.evaluateSingle();
 
-                    final TransformerHandler transformer02 = ((SAXTransformerFactory) factory).newTransformerHandler(templatesXmlToJson);
-                    transformer02.setResult(result);
+                        final XsltTransformer transformer01 = templatesMetsmodsToIiif.load();
+                        transformer01.setParameter(new QName("itemId"), new XdmAtomicValue(id));
+                        transformer01.setParameter(new QName("itemUrl"), new XdmAtomicValue(itemUrl));
+                        transformer01.setParameter(new QName("providerInfo"), providerItem);
 
-                    transformer01.transform(new StreamSource(new StringReader(inputXmlString)), new SAXResult(transformer02));
+                        final Serializer serializer = processor.newSerializer(outputStream);
+                        serializer.setOutputProperty(Serializer.Property.METHOD, "json");
+                        serializer.setOutputProperty(Serializer.Property.INDENT, "yes");
 
-                    return ResponseEntity
-                            .ok()
-                            .header("Content-Type", "application/json")
-                            .body(writer.toString());
+                        transformer01.setInitialContextNode(maybeReplaceWithMetadata(metModsDoc));
+                        transformer01.setDestination(serializer);
+                        transformer01.transform();
+
+                    } else {
+
+                        final XdmDestination intermediateResult = new XdmDestination();
+
+                        // 1. Cortex zu IIIF-XML
+                        final XsltTransformer transformer01 = templatesCortexToIiif.load();
+                        transformer01.setURIResolver(new CustomResolver());
+                        transformer01.setParameter(new QName("uri"), new XdmAtomicValue(itemUrl));
+                        transformer01.setInitialContextNode(doc);
+                        transformer01.setDestination(intermediateResult);
+                        transformer01.transform();
+
+                        // 2. IIIF-XML → IIIF-JSON
+                        final Serializer serializer = processor.newSerializer(outputStream);
+                        serializer.setOutputProperty(Serializer.Property.METHOD, "text");
+                        serializer.setOutputProperty(Serializer.Property.INDENT, "no");
+
+                        final XsltTransformer transformer02 = templatesXmlToJson.load();
+                        transformer02.setInitialContextNode(intermediateResult.getXdmNode());
+                        transformer02.setDestination(serializer);
+                        transformer02.transform();
+                    }
                 }
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+                outputStream.write(("{\"error\": \"" + StringEscapeUtils.escapeJson(e.getMessage()) + "\"}").getBytes(StandardCharsets.UTF_8));
             }
-            
-            return ResponseEntity
-                    .status(HttpStatusCode.valueOf(404))
-                    .header("Content-Type", "application/json")
-                    .body("{ \"Error\": \"" + id + " is not a valid DDB id\" }");
-        }
+        };
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(stream);
     }
 }
