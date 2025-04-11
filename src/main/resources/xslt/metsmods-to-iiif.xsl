@@ -322,8 +322,7 @@ limitations under the License.
                                 'id': $fulltextUrl,
                                 'type': 'Dataset',
                                 'format': 'application/xml+alto',
-                                'profile': 'http://www.loc.gov/standards/alto/',
-                                'label': map {'none': ['ALTO XML']}
+                                'profile': 'http://www.loc.gov/standards/alto/'
                             }
                         ]
                     }
