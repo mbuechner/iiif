@@ -317,11 +317,11 @@ limitations under the License.
                 if ($fulltextUrl != '')
                 then
                     map {
-                        'rendering': [
+                        'seeAlso': [
                             map {
                                 'id': $fulltextUrl,
-                                'type': 'Text',
-                                'format': 'application/xml',
+                                'type': 'Dataset',
+                                'format': 'application/xml+alto',
                                 'profile': 'http://www.loc.gov/standards/alto/',
                                 'label': map {'none': ['ALTO XML']}
                             }
