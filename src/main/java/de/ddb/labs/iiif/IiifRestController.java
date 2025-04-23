@@ -300,6 +300,11 @@ class IiifRestController {
 
                 LOG.info("{}: Transformation finshed in {} Sek. ", id, duration.toMillis() / 1000.0);
 
+            } catch (IllegalArgumentException e) {
+                LOG.warn("{}: {}", id, e.getMessage());
+                final String errMsg = StringEscapeUtils.escapeJson(e.getMessage());
+                final byte[] errMsgBytes = ("{\"error\": \"" + errMsg + "\"}").getBytes(StandardCharsets.UTF_8);
+                outputStream.write(errMsgBytes);
             } catch (Exception e) {
                 LOG.error("{}: {}", id, e.getMessage());
                 final String errMsg = StringEscapeUtils.escapeJson(e.getMessage());
