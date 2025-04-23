@@ -22,11 +22,8 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import javax.xml.transform.stream.StreamSource;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +47,7 @@ import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,9 +107,7 @@ class IiifRestController {
     private Resource metsmodsToIiif;
     private XsltExecutable templatesMetsmodsToIiif;
 
-    // Formatter mit deutschem Stil: Komma als Dezimaltrennzeichen
-    final DecimalFormatSymbols symbols;
-    final DecimalFormat df;
+    private static final Base32 BASE32 = new Base32(); // thread-safe
 
     public IiifRestController() throws URISyntaxException, IOException, SaxonApiException {
         final Dispatcher dispatcher = new Dispatcher();
@@ -139,9 +135,6 @@ class IiifRestController {
         recordExpr = xpath.compile("/cortex:cortex/source:source/source:record");
         oaiRecord = xpath.compile("/oai:record/oai:metadata");
         providerInfoExpr = xpath.compile("/cortex:cortex/cortex:provider-info");
-
-        symbols = new DecimalFormatSymbols(Locale.GERMANY);
-        df = new DecimalFormat("#,##0.000", symbols);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -154,6 +147,18 @@ class IiifRestController {
         templatesCortexToIiif = compiler.compile(ss01);
         templatesXmlToJson = compiler.compile(ss02);
         templatesMetsmodsToIiif = compiler.compile(ss03);
+    }
+
+    public static boolean isValidBase32(String s) {
+        if (s == null || s.length() != 32) {
+            return false;
+        }
+        try {
+            BASE32.decode(s);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public XdmNode maybeReplaceWithMetadata(XdmNode docNode) throws SaxonApiException {
@@ -184,114 +189,123 @@ class IiifRestController {
     @ResponseBody
     public ResponseEntity<StreamingResponseBody> getResource(HttpServletRequest request, @PathVariable String id, @RequestParam(value = "system", required = false) String system) throws FileNotFoundException, IOException {
 
-        final Instant start = Instant.now();
-
-        String requestUrl;
-
-        if (system != null && system.equalsIgnoreCase("Q1")) {
-            requestUrl = DDB_API_Q1 + id + API_KEY + ddbApiKeyQ1;
-        } else if (system != null && system.equalsIgnoreCase("Q2")) {
-            requestUrl = DDB_API_Q2 + id + API_KEY + ddbApiKeyQ2;
-        } else {
-            requestUrl = DDB_API_PROD + id + API_KEY + ddbApiKeyProd;
-        }
-
-        final Request getRequest = new Request.Builder()
-                .url(requestUrl)
-                .addHeader("Accept", "application/xml")
-                .get()
-                .build();
-
-        final String queryParameter = request.getQueryString();
-        final String itemUrl = baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter);
-
         final StreamingResponseBody stream = outputStream -> {
             try {
-                LOG.info("{}: Start transformation...", id);
-                final Response response = httpClient.newCall(getRequest).execute();
-                if (response.isSuccessful()) {
 
-                    final XdmNode doc = db.build(new StreamSource(response.body().source().inputStream()));
-
-                    final StringWriter stringWriter = new StringWriter();
-                    final Serializer ss = processor.newSerializer(stringWriter);
-                    ss.setOutputProperty(Serializer.Property.METHOD, "xml");
-                    ss.setOutputProperty(Serializer.Property.INDENT, "yes");
-
-                    // 3. Schreiben
-                    ss.serializeNode(doc);
-
-                    final XPathSelector typeSelector = checkExpr.load();
-                    typeSelector.setContextItem(doc);
-
-                    final XdmItem result = typeSelector.evaluateSingle();
-                    final String typeValue = result != null ? result.getStringValue() : "";
-
-                    if ("http://www.loc.gov/METS/".equalsIgnoreCase(typeValue)) {
-
-                        LOG.info("{}: Using METS/MODS metadata...", id);
-
-                        // METS/MODS     
-                        final XPathSelector metsModsSelector = recordExpr.load();
-                        metsModsSelector.setContextItem(doc);
-
-                        final XdmItem recordItem = metsModsSelector.evaluateSingle();
-                        final String metModsXml = recordItem.getStringValue().trim();
-
-                        final XdmNode metModsDoc = db.build(new StreamSource(new StringReader(metModsXml)));
-
-                        // Provider
-                        final XPathSelector providerSelector = providerInfoExpr.load();
-                        providerSelector.setContextItem(doc);
-                        final XdmItem providerItem = providerSelector.evaluateSingle();
-
-                        final XsltTransformer transformer01 = templatesMetsmodsToIiif.load();
-                        transformer01.setParameter(new QName("itemId"), new XdmAtomicValue(id));
-                        transformer01.setParameter(new QName("itemUrl"), new XdmAtomicValue(itemUrl));
-                        transformer01.setParameter(new QName("providerInfo"), providerItem);
-
-                        final Serializer serializer = processor.newSerializer(outputStream);
-                        serializer.setOutputProperty(Serializer.Property.METHOD, "json");
-                        serializer.setOutputProperty(Serializer.Property.INDENT, "yes");
-
-                        transformer01.setInitialContextNode(maybeReplaceWithMetadata(metModsDoc));
-                        transformer01.setDestination(serializer);
-                        transformer01.transform();
-
-                    } else {
-
-                        LOG.info("{}: Using Cortex metadata...", id);
-
-                        final XdmDestination intermediateResult = new XdmDestination();
-
-                        // 1. Cortex zu IIIF-XML
-                        final XsltTransformer transformer01 = templatesCortexToIiif.load();
-                        transformer01.setURIResolver(new CustomResolver());
-                        transformer01.setParameter(new QName("uri"), new XdmAtomicValue(itemUrl));
-                        transformer01.setInitialContextNode(doc);
-                        transformer01.setDestination(intermediateResult);
-                        transformer01.transform();
-
-                        // 2. IIIF-XML → IIIF-JSON
-                        final Serializer serializer = processor.newSerializer(outputStream);
-                        serializer.setOutputProperty(Serializer.Property.METHOD, "text");
-                        serializer.setOutputProperty(Serializer.Property.INDENT, "no");
-
-                        final XsltTransformer transformer02 = templatesXmlToJson.load();
-                        transformer02.setInitialContextNode(intermediateResult.getXdmNode());
-                        transformer02.setDestination(serializer);
-                        transformer02.transform();
-                    }
+                if (!isValidBase32(id)) {
+                    throw new IllegalArgumentException("NOT a valid DDB-ID");
                 }
+
+                final Instant start = Instant.now();
+                LOG.info("{}: Start transformation...", id);
+
+                String requestUrl;
+
+                if (system != null && system.equalsIgnoreCase("Q1")) {
+                    requestUrl = DDB_API_Q1 + id + API_KEY + ddbApiKeyQ1;
+                } else if (system != null && system.equalsIgnoreCase("Q2")) {
+                    requestUrl = DDB_API_Q2 + id + API_KEY + ddbApiKeyQ2;
+                } else {
+                    requestUrl = DDB_API_PROD + id + API_KEY + ddbApiKeyProd;
+                }
+
+                final Request getRequest = new Request.Builder()
+                        .url(requestUrl)
+                        .addHeader("Accept", "application/xml")
+                        .get()
+                        .build();
+
+                final String queryParameter = request.getQueryString();
+                final String itemUrl = baseUrl + request.getRequestURI() + ((queryParameter == null || queryParameter.isBlank()) ? "" : "?" + queryParameter);
+
+                final Response response = httpClient.newCall(getRequest).execute();
+                if (!response.isSuccessful()) {
+                    throw new IllegalArgumentException("DDB-API request was NOT successful");
+                }
+
+                final XdmNode doc = db.build(new StreamSource(response.body().source().inputStream()));
+
+                final StringWriter stringWriter = new StringWriter();
+                final Serializer ss = processor.newSerializer(stringWriter);
+                ss.setOutputProperty(Serializer.Property.METHOD, "xml");
+                ss.setOutputProperty(Serializer.Property.INDENT, "yes");
+
+                // 3. Schreiben
+                ss.serializeNode(doc);
+
+                final XPathSelector typeSelector = checkExpr.load();
+                typeSelector.setContextItem(doc);
+
+                final XdmItem result = typeSelector.evaluateSingle();
+                final String typeValue = result != null ? result.getStringValue() : "";
+
+                if ("http://www.loc.gov/METS/".equalsIgnoreCase(typeValue)) {
+
+                    LOG.info("{}: Using METS/MODS metadata...", id);
+
+                    // METS/MODS     
+                    final XPathSelector metsModsSelector = recordExpr.load();
+                    metsModsSelector.setContextItem(doc);
+
+                    final XdmItem recordItem = metsModsSelector.evaluateSingle();
+                    final String metModsXml = recordItem.getStringValue().trim();
+
+                    final XdmNode metModsDoc = db.build(new StreamSource(new StringReader(metModsXml)));
+
+                    // Provider
+                    final XPathSelector providerSelector = providerInfoExpr.load();
+                    providerSelector.setContextItem(doc);
+                    final XdmItem providerItem = providerSelector.evaluateSingle();
+
+                    final XsltTransformer transformer01 = templatesMetsmodsToIiif.load();
+                    transformer01.setParameter(new QName("itemId"), new XdmAtomicValue(id));
+                    transformer01.setParameter(new QName("itemUrl"), new XdmAtomicValue(itemUrl));
+                    transformer01.setParameter(new QName("providerInfo"), providerItem);
+
+                    final Serializer serializer = processor.newSerializer(outputStream);
+                    serializer.setOutputProperty(Serializer.Property.METHOD, "json");
+                    serializer.setOutputProperty(Serializer.Property.INDENT, "yes");
+
+                    transformer01.setInitialContextNode(maybeReplaceWithMetadata(metModsDoc));
+                    transformer01.setDestination(serializer);
+                    transformer01.transform();
+
+                } else {
+
+                    LOG.info("{}: Using Cortex metadata...", id);
+
+                    final XdmDestination intermediateResult = new XdmDestination();
+
+                    // 1. Cortex zu IIIF-XML
+                    final XsltTransformer transformer01 = templatesCortexToIiif.load();
+                    transformer01.setURIResolver(new CustomResolver());
+                    transformer01.setParameter(new QName("uri"), new XdmAtomicValue(itemUrl));
+                    transformer01.setInitialContextNode(doc);
+                    transformer01.setDestination(intermediateResult);
+                    transformer01.transform();
+
+                    // 2. IIIF-XML → IIIF-JSON
+                    final Serializer serializer = processor.newSerializer(outputStream);
+                    serializer.setOutputProperty(Serializer.Property.METHOD, "text");
+                    serializer.setOutputProperty(Serializer.Property.INDENT, "no");
+
+                    final XsltTransformer transformer02 = templatesXmlToJson.load();
+                    transformer02.setInitialContextNode(intermediateResult.getXdmNode());
+                    transformer02.setDestination(serializer);
+                    transformer02.transform();
+                }
+
+                final Instant end = Instant.now();
+                final Duration duration = Duration.between(start, end);
+
+                LOG.info("{}: Transformation finshed in {} Sek. ", id, duration.toMillis() / 1000.0);
+
             } catch (Exception e) {
-                LOG.error("{}: {}", id, e.getMessage(), e);
-                outputStream.write(("{\"error\": \"" + StringEscapeUtils.escapeJson(e.getMessage()) + "\"}").getBytes(StandardCharsets.UTF_8));
+                LOG.error("{}: {}", id, e.getMessage());
+                final String errMsg = StringEscapeUtils.escapeJson(e.getMessage());
+                final byte[] errMsgBytes = ("{\"error\": \"" + errMsg + "\"}").getBytes(StandardCharsets.UTF_8);
+                outputStream.write(errMsgBytes);
             }
-
-            final Instant end = Instant.now();
-            final Duration duration = Duration.between(start, end);
-
-            LOG.info("{}: Transformation finshed in {} Sek. ", id, df.format(duration.toMillis() / 1000.0));
         };
 
         return ResponseEntity.ok()
