@@ -22,6 +22,11 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import javax.xml.transform.stream.StreamSource;
 import lombok.extern.slf4j.Slf4j;
@@ -104,6 +109,10 @@ class IiifRestController {
     private Resource metsmodsToIiif;
     private XsltExecutable templatesMetsmodsToIiif;
 
+    // Formatter mit deutschem Stil: Komma als Dezimaltrennzeichen
+    final DecimalFormatSymbols symbols;
+    final DecimalFormat df;
+
     public IiifRestController() throws URISyntaxException, IOException, SaxonApiException {
         final Dispatcher dispatcher = new Dispatcher();
         dispatcher.setMaxRequests(64);
@@ -130,6 +139,9 @@ class IiifRestController {
         recordExpr = xpath.compile("/cortex:cortex/source:source/source:record");
         oaiRecord = xpath.compile("/oai:record/oai:metadata");
         providerInfoExpr = xpath.compile("/cortex:cortex/cortex:provider-info");
+
+        symbols = new DecimalFormatSymbols(Locale.GERMANY);
+        df = new DecimalFormat("#,##0.000", symbols);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -172,6 +184,8 @@ class IiifRestController {
     @ResponseBody
     public ResponseEntity<StreamingResponseBody> getResource(HttpServletRequest request, @PathVariable String id, @RequestParam(value = "system", required = false) String system) throws FileNotFoundException, IOException {
 
+        final Instant start = Instant.now();
+
         String requestUrl;
 
         if (system != null && system.equalsIgnoreCase("Q1")) {
@@ -193,6 +207,7 @@ class IiifRestController {
 
         final StreamingResponseBody stream = outputStream -> {
             try {
+                LOG.info("{}: Start transformation...", id);
                 final Response response = httpClient.newCall(getRequest).execute();
                 if (response.isSuccessful()) {
 
@@ -213,6 +228,8 @@ class IiifRestController {
                     final String typeValue = result != null ? result.getStringValue() : "";
 
                     if ("http://www.loc.gov/METS/".equalsIgnoreCase(typeValue)) {
+
+                        LOG.info("{}: Using METS/MODS metadata...", id);
 
                         // METS/MODS     
                         final XPathSelector metsModsSelector = recordExpr.load();
@@ -243,6 +260,8 @@ class IiifRestController {
 
                     } else {
 
+                        LOG.info("{}: Using Cortex metadata...", id);
+
                         final XdmDestination intermediateResult = new XdmDestination();
 
                         // 1. Cortex zu IIIF-XML
@@ -265,9 +284,14 @@ class IiifRestController {
                     }
                 }
             } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
+                LOG.error("{}: {}", id, e.getMessage(), e);
                 outputStream.write(("{\"error\": \"" + StringEscapeUtils.escapeJson(e.getMessage()) + "\"}").getBytes(StandardCharsets.UTF_8));
             }
+
+            final Instant end = Instant.now();
+            final Duration duration = Duration.between(start, end);
+
+            LOG.info("{}: Transformation finshed in {} Sek. ", id, df.format(duration.toMillis() / 1000.0));
         };
 
         return ResponseEntity.ok()

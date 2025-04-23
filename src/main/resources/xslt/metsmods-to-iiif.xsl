@@ -104,14 +104,27 @@ limitations under the License.
                   '<a href="https://www.ddb.com" target="_blank">DDB</a>'.
         -->
         <xsl:param as="xs:string" name="text" />
-        <xsl:param as="xs:string" name="url" />
-        <xsl:param as="xs:boolean" name="blank" />
+        <xsl:param as="xs:string?" name="url" />
+        <xsl:param as="xs:boolean?" name="blank" />
+
+        <xsl:variable name="safeUrl" select="
+                if (ddblabs:normalize-url(string($url)) = '') then
+                    ''
+                else
+                    ddblabs:normalize-url(string($url))" />
+        <xsl:variable name="safeBlank" select="boolean($blank)" />
+
         <xsl:variable name="targetAttr" select="
-                if ($blank) then
+                if ($safeBlank) then
                     ' target=&quot;_blank&quot;'
                 else
                     ''" />
-        <xsl:sequence select="concat('&lt;a href=&quot;', $url, '&quot;', $targetAttr, '&gt;', $text, '&lt;/a&gt;')" />
+        <xsl:sequence select="
+                if (not($safeUrl)) then
+                    string($text)
+                else
+                    concat('&lt;a href=&quot;', $safeUrl, '&quot;', $targetAttr, '&gt;', string($text), '&lt;/a&gt;')
+                " />
     </xsl:function>
     <xsl:function as="xs:string" name="ddblabs:iiif-base-url">
         <xsl:param as="xs:string" name="url" />
@@ -465,7 +478,6 @@ limitations under the License.
                 " />
     </xsl:function>
     <xsl:template match="/">
-        <xsl:message select="'Start to transform ID ' || $itemId" />
         <xsl:choose>
             <xsl:when test="$mode = 'IIIF'">
                 <xsl:apply-templates mode="iiif" select="/" />
