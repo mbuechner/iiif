@@ -15,12 +15,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <xsl:stylesheet version="3.0" xmlns:array="http://www.w3.org/2005/xpath-functions/array" xmlns:cortex="http://www.deutsche-digitale-bibliothek.de/cortex" xmlns:ddblabs="https://labs.deutsche-digitale-bibliothek.de" xmlns:map="http://www.w3.org/2005/xpath-functions/map" xmlns:mets="http://www.loc.gov/METS/" xmlns:mix="http://www.loc.gov/mix/v20" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:oai="http://www.openarchives.org/OAI/2.0/" xmlns:saxon="http://saxon.sf.net/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
     <!-- <xsl:output encoding="UTF-8" indent="yes" method="json" saxon:property-order="@context id type label metadata summary requiredStatement rights provider items structures annotations thumbnail navDate homepage logo rendering seeAlso partOf start services" use-character-maps="no-escape-slash" /> -->
     <xsl:output encoding="UTF-8" indent="yes" method="json" use-character-maps="no-escape-slash" />
     <xsl:strip-space elements="*" />
     <xsl:character-map name="no-escape-slash">
         <xsl:output-character character="/" string="/" />
     </xsl:character-map>
+
     <!-- Global parameters (these should be set from outside) -->
     <xsl:param as="xs:string" name="itemId" select="'TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
     <xsl:param as="xs:string" name="itemUrl" select="'https://iiif.deutsche-digitale-bibliothek.de/presentation/3/TTNVQWVXY3AKILUHHULXB5H2ZHZGEKOO'" />
@@ -32,6 +34,17 @@ limitations under the License.
             <cortex:provider-logo>https://www.example.org/logo.jpg</cortex:provider-logo>
         </cortex:provider-info>
     </xsl:param>
+
+    <!--
+        Keys definieren für schnelle Lookups
+          - fileGrpByUse: Zugriff auf mets:fileGrp nach @USE
+          - fileByID: Zugriff auf mets:file nach @ID
+          - linkByFrom: Zugriff auf structLink smLink nach xlink:from
+    -->
+    <xsl:key match="mets:fileGrp" name="fileGrpByUse" use="@USE" />
+    <xsl:key match="mets:file" name="fileByID" use="@ID" />
+    <xsl:key match="mets:smLink" name="linkByFrom" use="@xlink:from" />
+
     <xsl:variable as="xs:string" name="mode" select="
             if (exists(/mets:mets/mets:fileSec/mets:fileGrp[mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']]))
             then
@@ -43,6 +56,7 @@ limitations under the License.
                 else
                     'DEFAULT'
             " />
+
     <xsl:variable as="xs:string" name="preferredFileGrp" select="
             if ($mode = 'IIIF' and string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']][1]/@USE))
             then
@@ -59,6 +73,7 @@ limitations under the License.
                             'DEFAULT'
                         else
                             'ERROR'" />
+
     <xsl:variable as="xs:string" name="preferredFileGrpForThumbnails" select="
             if ($mode = 'IIIF' and string(/mets:mets/mets:fileSec/mets:fileGrp[mets:file[@MIMETYPE = 'application/vnd.kitodo.iiif']][1]/@USE))
             then
@@ -76,21 +91,22 @@ limitations under the License.
                         else
                             'ERROR'" />
 
+    <!--
+       Funktion: ddblabs:normalizeUrl
+       Beschreibung: Entfernt den abschließenden Schrägstrich von einer URL, falls vorhanden.
+       Parameter:
+           $url (xs:string) - Die URL, die normiert werden soll.
+       Rückgabewert: xs:string - Die normierte URL ohne abschließenden Schrägstrich.
+       Beispiel:
+           ddblabs:normalizeUrl('http://example.com/') gibt 'http://example.com' zurück.
+     -->
     <xsl:function as="xs:string" name="ddblabs:normalize-url">
-        <!--
-        Funktion: ddblabs:normalizeUrl
-        Beschreibung: Entfernt den abschließenden Schrägstrich von einer URL, falls vorhanden.
-        Parameter:
-            $url (xs:string) - Die URL, die normiert werden soll.
-        Rückgabewert: xs:string - Die normierte URL ohne abschließenden Schrägstrich.
-        Beispiel:
-            ddblabs:normalizeUrl('http://example.com/') gibt 'http://example.com' zurück.
-        -->
+
         <xsl:param as="xs:string" name="url" />
         <xsl:sequence select="replace(normalize-space($url), '/$', '')" />
     </xsl:function>
-    <xsl:function as="xs:string" name="ddblabs:generate-link">
-        <!--
+
+    <!--
         Funktion: ddblabs:generateLink
         Beschreibung: Erstellt einen HTML-Link (<a>-Tag) aus einem angegebenen Text und einer URL.
                       Optional kann der Link so eingestellt werden, dass er in einem neuen Tab/Fenster geöffnet wird.
@@ -102,7 +118,8 @@ limitations under the License.
         Rückgabewert: Ein String, der einen HTML-Link (<a>-Tag) darstellt.
         Beispiel: ddblabs:generateLink('DDB', 'https://www.ddb.de', true()) erzeugt den String
                   '<a href="https://www.ddb.com" target="_blank">DDB</a>'.
-        -->
+    -->
+    <xsl:function as="xs:string" name="ddblabs:generate-link">
         <xsl:param as="xs:string" name="text" />
         <xsl:param as="xs:string?" name="url" />
         <xsl:param as="xs:boolean?" name="blank" />
@@ -126,17 +143,19 @@ limitations under the License.
                     concat('&lt;a href=&quot;', $safeUrl, '&quot;', $targetAttr, '&gt;', string($text), '&lt;/a&gt;')
                 " />
     </xsl:function>
+
+    <!-- 
+        Gibt die Basis-URL eines IIIF Image API-Aufrufs zurück, d. h. die URL bis einschließlich Identifier.
+        
+        Funktion deckt folgende Fälle ab:
+        1. URL endet mit /info.json → entfernt /info.json
+        2. URL endet mit /.../default.format → entfernt region/size/rotation/default.format
+        3. URL ist bereits die Basis mit Identifier → wird unverändert zurückgegeben
+    -->
     <xsl:function as="xs:string" name="ddblabs:iiif-base-url">
         <xsl:param as="xs:string" name="url" />
         <xsl:variable as="xs:string" name="cleanUrl" select="ddblabs:normalize-url($url)" />
-        <!-- 
-            Gibt die Basis-URL eines IIIF Image API-Aufrufs zurück, d. h. die URL bis einschließlich Identifier.
-            
-            Funktion deckt folgende Fälle ab:
-            1. URL endet mit /info.json → entfernt /info.json
-            2. URL endet mit /.../default.format → entfernt region/size/rotation/default.format
-            3. URL ist bereits die Basis mit Identifier → wird unverändert zurückgegeben
-        -->
+
         <xsl:sequence select="
                 if (ends-with($cleanUrl, '/info.json')) then
                     replace($cleanUrl, '/info\.json$', '')
@@ -147,141 +166,86 @@ limitations under the License.
                         $cleanUrl
                 " />
     </xsl:function>
-    <xsl:function as="map(*)" name="ddblabs:transform-div">
-        <!--
-            Funktion: fn:transform-div
-            Beschreibung:
-                Wandelt ein mets:div rekursiv in ein IIIF Range-Objekt um.
-                Verlinkte PHYS-IDs aus structLink (xlink:to) werden als Canvas-Objekte
-                in "items" eingefügt.
-        
-            Parameter:
-                $div  – mets:div-Element
-                $root – Wurzelknoten zur structLink-Auswertung
-        
-            Rückgabe:
-                map(*) – IIIF Range mit id, type, label und items
-        -->
-        <xsl:param as="element(mets:div)" name="div" />
-        <xsl:param as="document-node()" name="root" />
 
-        <xsl:variable name="id" select="string($div/@ID)" />
-        <xsl:variable name="label" select="($div/@LABEL, $div/@ORDERLABEL, $div/@ID)[. != ''][1]" />
-        <xsl:variable name="targets" select="$root//mets:structLink/mets:smLink[@xlink:from = $id]/@xlink:to" />
-
-        <xsl:variable name="child-divs" select="$div/mets:div" />
-
-        <!-- Canvas-Verlinkungen aus structLink -->
-        <xsl:variable as="array(*)" name="linked-canvases">
-            <xsl:sequence select="
-                    array {
-                        for $t in $targets
-                        return
-                            map {
-                                'id': $itemUrl || '/canvas/' || $t,
-                                'type': 'Canvas'
-                                (: optional: 'label': map { 'none': [string($label)] } :)
-                            }
-                    }
-                    " />
-        </xsl:variable>
-
-        <!-- Kind-Elemente rekursiv behandeln -->
-        <xsl:variable as="array(*)" name="child-items">
-            <xsl:choose>
-                <xsl:when test="exists($child-divs)">
-                    <xsl:sequence select="
-                            array {
-                                for $child in $child-divs
-                                return
-                                    ddblabs:transform-div($child, $root)
-                            }
-                            " />
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:sequence select="[]" />
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-
-        <!-- Mische eigene Kind-Divs und Canvas-Links -->
-        <xsl:variable name="all-items" select="
-                if (exists($child-items) or exists($linked-canvases))
-                then
-                    array:join(($child-items, $linked-canvases))
-                else
-                    array {$itemUrl || '/range/' || $id}
-                " />
-
-        <xsl:sequence select="
-                map {
-                    'id': $itemUrl || '/range/' || $id,
-                    'type': 'Range',
-                    'label': map {'none': [string($label)]},
-                    'items': $all-items
-                }
-                " />
-    </xsl:function>
+    <!--
+        Funktion: ddblabs:build-canvas
+        Beschreibung:
+          Baut ein vollständiges Canvas-Objekt aus einem <mets:div> mit TYPE="page" innerhalb der PHYSICAL structMap.
+    
+        Parameter:
+          - $physDiv   (element(mets:div)): METS-Oberklasse für die Seite
+          - $root      (document-node()): Wurzel des METS-Dokuments
+          - $position  (xs:integer): Laufende Nummer der Seite für Label-Fallback
+    
+        Rückgabe:
+          map(*) – Eine Map, die alle erforderlichen Felder des Canvas enthält.
+    -->
     <xsl:function as="map(*)" name="ddblabs:build-canvas">
-        <!--
-            Funktion: iiif:build-canvas
-            Beschreibung:
-                Baut ein vollständiges IIIF Canvas-Objekt aus einem mets:div in der PHYSICAL structMap.
-            Parameter:
-                $physDiv – <mets:div> mit TYPE="page"
-                $root – Root-Dokument zur Auflösung von fileGrp, FLocat, amdSec
-            Rückgabe:
-        -->
+
         <xsl:param as="element(mets:div)" name="physDiv" />
         <xsl:param as="document-node()" name="root" />
         <xsl:param as="xs:integer" name="position" />
 
-        <!-- IDs und URLs -->
+        <!-- Subtrees cachen -->
+        <xsl:variable name="fileSec" select="$root/mets:mets/mets:fileSec" />
+        <xsl:variable name="structMap" select="$root/mets:mets/mets:structMap" />
+        <xsl:variable name="amdSec" select="$root/mets:mets/mets:amdSec" />
         <xsl:variable name="physId" select="$physDiv/@ID" />
 
-        <!-- Hole passende IIIF-Datei -->
-        <xsl:variable name="iiifFile" select="$root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredFileGrp]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr/@FILEID]" />
-        <xsl:variable name="fileId" select="string($iiifFile/@ID)" />
+        <!-- IIIF-File holen via Keys -->
+        <xsl:variable name="grpIIIF" select="key('fileGrpByUse', $preferredFileGrp, $fileSec)" />
+        <xsl:variable name="fptrID" select="$structMap//mets:div[@ID = $physId]/mets:fptr/@FILEID" />
+        <xsl:variable name="iiifFile" select="key('fileByID', $fptrID, $grpIIIF)" />
         <xsl:variable name="fileUrl" select="string($iiifFile/mets:FLocat/@xlink:href)" />
         <xsl:variable name="mimeType" select="string($iiifFile/@MIMETYPE)" />
-        <xsl:variable name="thumbnailUrl" select="
-                if (exists($root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredFileGrpForThumbnails]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = 'phys14754105']/mets:fptr/@FILEID]/mets:FLocat/@xlink:href))
-                then
-                    string($root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredFileGrpForThumbnails]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = 'phys14754105']/mets:fptr/@FILEID]/mets:FLocat/@xlink:href)
-                else
-                    $fileUrl
-                " />
-        <xsl:variable name="thumbnailMimeType" select="
-                if (exists($root/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails]/mets:file[@ID = $fileId]/@MIMETYPE))
-                then
-                    string($root/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails]/mets:file[@ID = $fileId]/@MIMETYPE)
-                else
-                    $mimeType
-                " />
 
-        <!-- Bilddimensionen -->
-        <xsl:variable name="mix" select="$root/mets:mets/mets:amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
+        <!-- Bilddimensionen aus MIX -->
+        <xsl:variable name="mix" select="$amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
         <xsl:variable as="xs:integer" name="width" select="
-                if ($mix/mix:imageWidth/text()) then
+                if ($mix/mix:imageWidth) then
                     xs:integer($mix/mix:imageWidth)
                 else
                     800" />
         <xsl:variable as="xs:integer" name="height" select="
-                if ($mix/mix:imageHeight/text()) then
+                if ($mix/mix:imageHeight) then
                     xs:integer($mix/mix:imageHeight)
                 else
                     600" />
 
-        <!-- Volltexte holen -->
-        <xsl:variable as="xs:string" name="fileId" select="string($root/mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID)" />
-        <xsl:variable as="xs:string" name="fulltextUrl" select="
-                if ($fileId != '')
+        <!-- Thumbnail via Keys + Fallback -->
+        <xsl:variable name="grpThumb" select="key('fileGrpByUse', $preferredFileGrpForThumbnails, $fileSec)" />
+        <xsl:variable name="thumbID" select="$structMap//mets:div[@ID = $physId]/mets:fptr[@USE = 'THUMBNAIL']/@FILEID" />
+        <xsl:variable name="thumbFile" select="key('fileByID', $thumbID, $grpThumb)" />
+        <xsl:variable as="xs:string" name="thumbnailUrl" select="
+                if (exists($thumbFile/mets:FLocat/@xlink:href))
                 then
-                    string($root/mets:mets/mets:fileSec//mets:fileGrp[@USE = 'DDB_FULLTEXT']/mets:file[@ID = $fileId]/mets:FLocat/@xlink:href)
+                    string($thumbFile/mets:FLocat/@xlink:href)
                 else
-                    ''" />
+                    $fileUrl
+                " />
+        <xsl:variable as="xs:string" name="thumbnailMimeType" select="
+                if (exists($thumbFile/@MIMETYPE))
+                then
+                    string($thumbFile/@MIMETYPE)
+                else
+                    $mimeType
+                " />
 
-        <!-- Zusammensetzen des Canvas-Objekts -->
+        <!-- Volltext-URL holen, falls vorhanden -->
+        <xsl:variable name="fulltextFptr" select="$structMap//mets:div[@ID = $physId]/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID" />
+        <xsl:variable as="xs:string" name="fulltextUrl" select="
+                if ($fulltextFptr)
+                then
+                    string(
+                    key('fileByID', $fulltextFptr,
+                    key('fileGrpByUse', 'DDB_FULLTEXT', $fileSec))
+                    /mets:FLocat/@xlink:href
+                    )
+                else
+                    ''
+                " />
+
+        <!-- Canvas-Map zusammenbauen -->
         <xsl:sequence select="
                 map:merge((
                 map {
@@ -327,7 +291,7 @@ limitations under the License.
                         }
                     ]
                 },
-                if ($fulltextUrl != '')
+                if (string-length(normalize-space($fulltextUrl)) > 0)
                 then
                     map {
                         'seeAlso': [
@@ -344,65 +308,77 @@ limitations under the License.
                 ))
                 " />
     </xsl:function>
+
+    <!--
+        Funktion: ddblabs:build-iiif-canvas
+        Beschreibung:
+          Baut ein vollständiges IIIF Canvas-Objekt mit Service-Info aus einem <mets:div> in der PHYSICAL structMap.
+    
+        Parameter:
+          - $physDiv           (element(mets:div)): METS-Oberklasse für die Seite
+          - $root              (document-node()): Wurzel des METS-Dokuments
+          - $position          (xs:integer): Laufende Nummer der Seite für Label-Fallback
+          - $serviceVersion    (xs:string): IIIF-Service-Version ('2' oder '3')
+          - $serviceProfileLevel(xs:string): IIIF-Service-Profil-URI
+    
+        Rückgabe:
+          map(*) – Eine Map mit IIIF-Links, die alle erforderlichen Felder des Canvas enthält.
+    -->
     <xsl:function as="map(*)" name="ddblabs:build-iiif-canvas">
-        <!--
-            Funktion: iiif:build-iiif-canvas
-            Beschreibung:
-                Baut ein vollständiges IIIF Canvas-Objekt aus einem mets:div in der PHYSICAL structMap.
-            Parameter:
-                $physDiv – <mets:div> mit TYPE="page"
-                $root – Root-Dokument zur Auflösung von fileGrp, FLocat, amdSec
-            Rückgabe:
-                map(*) – Ein IIIF-Canvas inklusive AnnotationPage, Annotation, Bildinformationen und Service
-        -->
         <xsl:param as="element(mets:div)" name="physDiv" />
         <xsl:param as="document-node()" name="root" />
         <xsl:param as="xs:string" name="serviceVersion" />
         <xsl:param as="xs:string" name="serviceProfileLevel" />
         <xsl:param as="xs:integer" name="position" />
 
-        <!-- IDs und URLs -->
+        <!-- 2) Subtrees cachen -->
+        <xsl:variable name="fileSec" select="$root/mets:mets/mets:fileSec" />
+        <xsl:variable name="structMap" select="$root/mets:mets/mets:structMap" />
+        <xsl:variable name="amdSec" select="$root/mets:mets/mets:amdSec" />
         <xsl:variable name="physId" select="$physDiv/@ID" />
 
-        <!-- Hole passende IIIF-Datei -->
-        <xsl:variable name="iiifFile" select="$root/mets:mets/mets:fileSec//mets:fileGrp[@USE = $preferredFileGrp]/mets:file[@ID = /mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr/@FILEID]" />
-        <xsl:variable name="fileId" select="string($iiifFile/@ID)" />
+        <!-- IIIF-File via Keys -->
+        <xsl:variable name="grpIIIF" select="key('fileGrpByUse', $preferredFileGrp, $fileSec)" />
+        <xsl:variable name="fptrID" select="$structMap//mets:div[@ID = $physId]/mets:fptr/@FILEID" />
+        <xsl:variable name="iiifFile" select="key('fileByID', $fptrID, $grpIIIF)" />
         <xsl:variable name="baseUrl" select="ddblabs:iiif-base-url(string($iiifFile/mets:FLocat/@xlink:href))" />
 
-        <!-- Bilddimensionen -->
-        <xsl:variable name="mix" select="$root/mets:mets/mets:amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
-        <xsl:variable name="width" select="
-                if ($mix/mix:imageWidth/text()) then
+        <!-- Bilddimensionen aus MIX -->
+        <xsl:variable name="mix" select="$amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
+        <xsl:variable as="xs:integer" name="width" select="
+                if ($mix/mix:imageWidth) then
                     xs:integer($mix/mix:imageWidth)
                 else
                     800" />
-        <xsl:variable name="height" select="
-                if ($mix/mix:imageHeight/text()) then
+        <xsl:variable as="xs:integer" name="height" select="
+                if ($mix/mix:imageHeight) then
                     xs:integer($mix/mix:imageHeight)
                 else
                     600" />
 
-        <!-- Suffix -->
+        <!-- IIIF-URL Suffix -->
         <xsl:variable name="urlSuffix" select="
                 if ($serviceVersion = '3')
                 then
                     '/full/max/0/default.jpg'
                 else
-                    '/full/full/0/default.jpg'
-                " />
+                    '/full/full/0/default.jpg'" />
 
-        <!-- Volltexte holen -->
-        <xsl:variable as="xs:string" name="fileId" select="string($root/mets:mets/mets:structMap/mets:div/mets:div[@ID = $physId]/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID)" />
+        <!-- Volltext-URL holen, falls vorhanden -->
+        <xsl:variable name="fulltextFptr" select="$structMap//mets:div[@ID = $physId]/mets:fptr[contains(@FILEID, 'DDB_FULLTEXT')]/@FILEID" />
         <xsl:variable as="xs:string" name="fulltextUrl" select="
-                if ($fileId != '')
+                if ($fulltextFptr)
                 then
-                    string($root/mets:mets/mets:fileSec//mets:fileGrp[@USE = 'DDB_FULLTEXT']/mets:file[@ID = $fileId]/mets:FLocat/@xlink:href)
+                    string(
+                    key('fileByID', $fulltextFptr, key('fileGrpByUse', 'DDB_FULLTEXT', $fileSec))
+                    /mets:FLocat/@xlink:href)
                 else
                     ''" />
 
-        <!-- Zusammensetzen des Canvas-Objekts -->
+        <!-- Canvas-Map mit IIIF-Service zusammenbauen -->
         <xsl:sequence select="
-                map:merge((map {
+                map:merge((
+                map {
                     'id': $itemUrl || '/canvas/' || $physId,
                     'type': 'Canvas',
                     'height': $height,
@@ -458,8 +434,9 @@ limitations under the License.
                             ]
                         }
                     ]
-                },
-                if ($fulltextUrl != '')
+                }
+                ,
+                if (string-length(normalize-space($fulltextUrl)) > 0)
                 then
                     map {
                         'rendering': [
@@ -477,6 +454,85 @@ limitations under the License.
                 ))
                 " />
     </xsl:function>
+
+    <!--
+        Funktion: ddblabs:transform-div
+        Beschreibung:
+          Rekursive Umwandlung eines mets:div-Baums in ein IIIF Range-Objekt.
+          Verlinkte PHYS-IDs (structLink smLink/@xlink:from→@xlink:to) werden
+          als Canvas-Referenzen angehängt.
+    
+        Parameter:
+          - $div  (element(mets:div)): aktuelles Struktur-Div
+          - $root (document-node()): Wurzel zur Auflösung aller Links
+    
+        Rückgabe:
+          map(*) – IIIF Range mit id, type='Range', label und items (Ranges & Canvases)
+    -->
+    <xsl:function as="map(*)" name="ddblabs:transform-div">
+        <xsl:param as="element(mets:div)" name="div" />
+        <xsl:param as="document-node()" name="root" />
+
+        <!--
+          1) ID und Label aus DIV
+          2) Alle Ziele aus structLink per Key lookup
+          3) Alle Kind-Divs
+        -->
+        <xsl:variable name="id" select="string($div/@ID)" />
+        <xsl:variable name="label" select="(normalize-space($div/@LABEL), normalize-space($div/@ORDERLABEL), $id)[1]" />
+
+        <xsl:variable name="targets" select="
+                for $link in key('linkByFrom', $id, $root)
+                return
+                    string($link/@xlink:to)
+                " />
+
+        <xsl:variable name="childDivs" select="$div/mets:div" />
+
+        <!--
+          Items zusammenstellen:
+          - zuerst transform-div auf alle Kind-Divs
+          - danach Canvas-Maps für jeden target
+          Bei keiner Kind-Div und keinem target, wird eine self-Range als Fallback angehängt.
+        -->
+        <xsl:variable as="array(*)" name="items">
+            <xsl:sequence select="
+                    array {
+                        for $child in $childDivs
+                        return
+                            ddblabs:transform-div($child, $root),
+                        for $t in $targets
+                        return
+                            map {
+                                'id': $itemUrl || '/canvas/' || $t,
+                                'type': 'Canvas'
+                            }
+                    }" />
+        </xsl:variable>
+
+        <xsl:variable name="allItems" select="
+                if (exists($items))
+                then
+                    $items
+                else
+                    array {
+                        map {
+                            'id': $itemUrl || '/range/' || $id,
+                            'type': 'Range'
+                        }
+                    }
+                " />
+
+        <!-- Ergebnis-Map -->
+        <xsl:sequence select="
+                map {
+                    'id': $itemUrl || '/range/' || $id,
+                    'type': 'Range',
+                    'label': map {'none': [$label]},
+                    'items': $allItems
+                }" />
+    </xsl:function>
+
     <xsl:template match="/">
         <xsl:choose>
             <xsl:when test="$mode = 'IIIF'">
@@ -492,6 +548,7 @@ limitations under the License.
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
+
     <xsl:template match="/" mode="common">
         <!-- "@context": "http://iiif.io/api/presentation/3/context.json" -->
         <xsl:map-entry key="'@context'" select="'http://iiif.io/api/presentation/3/context.json'" />
@@ -505,10 +562,13 @@ limitations under the License.
                 "Bergedorfer Zeitung und Anzeiger"
             ]},
             -->
-        <xsl:map-entry key="'label'" select="
-                map {
-                    'de': array {/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:relatedItem/mods:titleInfo/mods:title/text()}
-                }" />
+        <xsl:variable name="labelNodes" select="/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:relatedItem/mods:titleInfo/mods:title" />
+        <xsl:if test="$labelNodes">
+            <xsl:map-entry key="'label'" select="
+                    map {
+                        'de': array {$labelNodes/text()}
+                    }" />
+        </xsl:if>
         <!--
             "viewingDirection": "left-to-right",
             -->
@@ -520,7 +580,10 @@ limitations under the License.
         <!--
             "rights": "http://creativecommons.org/licenses/by-nc/4.0/",
             -->
-        <xsl:map-entry key="'rights'" select="string(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:recordInfo/mods:recordInfoNote[@type = 'license'])" />
+        <xsl:variable name="rightsNodes" select="/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:recordInfo/mods:recordInfoNote[@type = 'license']" />
+        <xsl:if test="$rightsNodes">
+            <xsl:map-entry key="'rights'" select="string($rightsNodes)" />
+        </xsl:if>
 
         <!-- 
             "requiredStatement": {
@@ -539,26 +602,32 @@ limitations under the License.
                 }
             },
             -->
-        <xsl:map-entry key="'requiredStatement'" select="
-                map {
-                    'label': map {
-                        'en': array {'Attribution'},
-                        'de': array {'Zuschreibung'}
-                    },
-                    'value': map {
-                        'none': array {
-                            ddblabs:generate-link(
-                            if (exists(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']))
-                            then
-                                string(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']/mods:publisher[1])
-                            else
-                                string(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[not(@eventType)][1]/mods:publisher[1]),
-                            
-                            /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:identifier[@type = 'purl'][1], true())
+        <xsl:variable as="xs:string" name="publisher">
+            <xsl:sequence select="
+                    ddblabs:generate-link(
+                    if (exists(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']))
+                    then
+                        string(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[@eventType = 'digitization']/mods:publisher[1])
+                    else
+                        string(/mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:originInfo[not(@eventType)][1]/mods:publisher[1]),
+                    
+                    /mets:mets/mets:dmdSec[1]/mets:mdWrap/mets:xmlData/mods:mods/mods:identifier[@type = 'purl'][1], true())
+                    " />
+        </xsl:variable>
+        <xsl:if test="string-length($publisher) &gt; 0">
+            <xsl:map-entry key="'requiredStatement'" select="
+                    map {
+                        'label': map {
+                            'en': array {'Attribution'},
+                            'de': array {'Zuschreibung'}
+                        },
+                        'value': map {
+                            'none': array {
+                                $publisher
+                            }
                         }
-                    }
-                }" />
-
+                    }" />
+        </xsl:if>
         <!-- provider -->
         <!-- 
           "provider": {
@@ -728,6 +797,7 @@ limitations under the License.
                 }
                 " />
     </xsl:template>
+
     <xsl:template match="/" mode="default">
         <xsl:map>
             <xsl:apply-templates mode="common" select="." />
@@ -778,6 +848,7 @@ limitations under the License.
                     " />
         </xsl:map>
     </xsl:template>
+
     <xsl:template match="/" mode="iiif">
         <xsl:variable name="firstImageUrl" select="ddblabs:iiif-base-url(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrp]/mets:file[1]/mets:FLocat/@xlink:href))" />
         <xsl:variable name="serviceJson" select="json-doc($firstImageUrl || '/info.json')" />
@@ -841,7 +912,7 @@ limitations under the License.
                         {
                         ...
             -->
-            <xsl:variable name="divs" select="//mets:structMap[@TYPE = 'PHYSICAL']//mets:div[@TYPE = 'page']" />
+            <xsl:variable name="divs" select="/mets:mets/mets:structMap[@TYPE = 'PHYSICAL']//mets:div[@TYPE = 'page']" />
             <xsl:map-entry key="'items'" select="
                     array {
                         for $i in 1 to count($divs)
@@ -851,4 +922,5 @@ limitations under the License.
                     " />
         </xsl:map>
     </xsl:template>
+
 </xsl:stylesheet>
