@@ -209,12 +209,12 @@ limitations under the License.
                 if ($mix/mix:imageWidth) then
                     xs:integer($mix/mix:imageWidth)
                 else
-                    800" />
+                    1600" />
         <xsl:variable as="xs:integer" name="height" select="
                 if ($mix/mix:imageHeight) then
                     xs:integer($mix/mix:imageHeight)
                 else
-                    600" />
+                    1200" />
 
         <!-- Thumbnail via Keys + Fallback -->
         <xsl:variable name="grpThumb" select="key('fileGrpByUse', $preferredFileGrpForThumbnails, $fileSec)" />
@@ -351,12 +351,12 @@ limitations under the License.
                 if ($mix/mix:imageWidth) then
                     xs:integer($mix/mix:imageWidth)
                 else
-                    800" />
+                    1600" />
         <xsl:variable as="xs:integer" name="height" select="
                 if ($mix/mix:imageHeight) then
                     xs:integer($mix/mix:imageHeight)
                 else
-                    600" />
+                    1200" />
 
         <!-- IIIF-URL Suffix -->
         <xsl:variable name="urlSuffix" select="
@@ -434,7 +434,9 @@ limitations under the License.
                                     'type': 'ImageService' || $serviceVersion,
                                     'profile': $serviceProfileLevel
                                 }
-                            ]
+                            ],
+                            'height': 300,
+                            'width': 300
                         }
                     ]
                 }
@@ -649,8 +651,8 @@ limitations under the License.
                 "id": "https://www.example.org/logo.jpg",
                 "type": "Image",
                 "format": "image/jpeg",
-                "height": 600,
-                "width": 800
+                "height": 1200,
+                "width": 1600
               } ],
             "seeAlso": [ {
                 "id": "https://www.deutsche-digitale-bibliothek.de/organization/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
@@ -687,8 +689,8 @@ limitations under the License.
                                     map {
                                         'id': string($providerInfo/cortex:provider-logo),
                                         'type': 'Image',
-                                        'width': 800,
-                                        'height': 600,
+                                        'width': 1600,
+                                        'height': 1200,
                                         'format':
                                         if (matches($providerInfo/cortex:provider-logo, '\.jpe?g$', 'i')) then
                                             'image/jpeg'
@@ -824,8 +826,8 @@ limitations under the License.
                             'id': string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails]/mets:file[1]/mets:FLocat/@xlink:href),
                             'type': 'Image',
                             'format': string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails]/mets:file[1]/@MIMETYPE),
-                            'height': 600,
-                            'width': 800
+                            'height': 1200,
+                            'width': 1600
                         }
                     }" />
 
@@ -900,7 +902,9 @@ limitations under the License.
                                     'type': 'ImageService' || $serviceVersion,
                                     'profile': $serviceProfileLevel
                                 }
-                            }
+                            },
+                            'height': 300,
+                            'width': 300
                         }
                     }" />
             <!-- 
