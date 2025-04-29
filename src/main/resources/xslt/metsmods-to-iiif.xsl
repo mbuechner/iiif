@@ -251,6 +251,23 @@ limitations under the License.
                     ''
                 " />
 
+        <xsl:variable as="xs:string" name="order" select="normalize-space($physDiv/@ORDER)" />
+        <xsl:variable as="xs:string" name="orderLabel" select="normalize-space($physDiv/@ORDERLABEL)" />
+        <xsl:variable as="xs:string" name="displayLabel" select="
+                if ($order)
+                then
+                    concat(
+                    $order,
+                    if ($orderLabel)
+                    then
+                        concat(' (', $orderLabel, ')')
+                    else
+                        ()
+                    )
+                else
+                    ($orderLabel, $position)[1]
+                " />
+
         <!-- Canvas-Map zusammenbauen -->
         <xsl:sequence select="
                 map:merge((
@@ -281,13 +298,7 @@ limitations under the License.
                         }
                     ],
                     'label': map {
-                        'none': [
-                            if (string-length(normalize-space($physDiv/@ORDERLABEL)) > 0)
-                            then
-                                string($physDiv/@ORDERLABEL)
-                            else
-                                string($position)
-                        ]
+                        'none': [$displayLabel]
                     },
                     'thumbnail': [
                         map {
@@ -378,6 +389,23 @@ limitations under the License.
                 else
                     ''" />
 
+        <xsl:variable as="xs:string" name="order" select="normalize-space($physDiv/@ORDER)" />
+        <xsl:variable as="xs:string" name="orderLabel" select="normalize-space($physDiv/@ORDERLABEL)" />
+        <xsl:variable as="xs:string" name="displayLabel" select="
+                if ($order)
+                then
+                    concat(
+                    $order,
+                    if ($orderLabel)
+                    then
+                        concat(' (', $orderLabel, ')')
+                    else
+                        ()
+                    )
+                else
+                    ($orderLabel, $position)[1]
+                " />
+
         <!-- Canvas-Map mit IIIF-Service zusammenbauen -->
         <xsl:sequence select="
                 map:merge((
@@ -415,13 +443,7 @@ limitations under the License.
                         }
                     ],
                     'label': map {
-                        'none': [
-                            if (string-length(normalize-space($physDiv/@ORDERLABEL)) > 0)
-                            then
-                                string($physDiv/@ORDERLABEL)
-                            else
-                                string($position)
-                        ]
+                        'none': [$displayLabel]
                     },
                     'thumbnail': [
                         map {
