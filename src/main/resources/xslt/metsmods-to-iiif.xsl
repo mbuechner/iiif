@@ -483,7 +483,23 @@ limitations under the License.
           3) Alle Kind-Divs
         -->
         <xsl:variable name="id" select="string($div/@ID)" />
-        <xsl:variable name="label" select="(normalize-space($div/@LABEL), normalize-space($div/@ORDERLABEL), $id)[1]" />
+        <xsl:variable name="label" select="normalize-space($div/@LABEL)" />
+        <xsl:variable name="orderLabel" select="normalize-space($div/@ORDERLABEL)" />
+        <xsl:variable name="displayLabel" select="
+                if ($label)
+                then
+                    concat(
+                    $label,
+                    if ($orderLabel)
+                    then
+                        concat(' (', $orderLabel, ')')
+                    else
+                        ()
+                    )
+                else
+                    ($orderLabel, $id)[1]
+                " />
+
 
         <xsl:variable name="targets" select="
                 for $link in key('linkByFrom', $id, $root)
@@ -532,7 +548,7 @@ limitations under the License.
                 map {
                     'id': $itemUrl || '/range/' || $id,
                     'type': 'Range',
-                    'label': map {'none': [$label]},
+                    'label': map {'none': [$displayLabel]},
                     'items': $allItems
                 }" />
     </xsl:function>
@@ -904,7 +920,7 @@ limitations under the License.
                                 }
                             },
                             'height': 300,
-                            'width': 300
+                            'width': 600
                         }
                     }" />
             <!-- 
