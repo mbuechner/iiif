@@ -47,6 +47,7 @@ limitations under the License.
     <xsl:key match="mets:div" name="divByID" use="@ID" />
 
     <!-- Global Variables -->
+    <xsl:variable as="xs:integer" name="thumbnailWidth" select="600" />
     <xsl:variable as="document-node()" name="root" select="/" />
     <xsl:variable as="element(mets:fileSec)" name="fileSec" select="/mets:mets/mets:fileSec" />
     <xsl:variable as="element(mets:structMap)" name="structMapPhysical" select="/mets:mets/mets:structMap[@TYPE = 'PHYSICAL']" />
@@ -172,6 +173,121 @@ limitations under the License.
                         replace($cleanUrl, '^(https?://[^/]+/[^/]+/.+?)/[^/]+/[^/]+/[^/]+/default\.\w+$', '$1')
                     else
                         $cleanUrl
+                " />
+    </xsl:function>
+
+    <!--
+        Funktion gibt optional eine Map zurück:
+          – Map mit den Werten, wenn alles erfolgreich extrahiert wurde
+          – ansonsten die leere Sequenz ()
+    -->
+    <xsl:function as="map(xs:string,item()?)?" name="ddblabs:get-info">
+        <xsl:param as="xs:string" name="url" />
+
+        <xsl:try>
+            <!-- 0) rohen JSON-Text holen -->
+            <xsl:variable name="raw" select="unparsed-text($url)" />
+
+            <!-- 1) JSON parsen -->
+            <xsl:variable name="info" select="parse-json($raw)" />
+
+            <!-- API-Verion -->
+            <xsl:variable name="version">
+                <xsl:choose>
+                    <xsl:when test="$info?('@context') = 'http://iiif.io/api/image/1/context.json'">1</xsl:when>
+                    <xsl:when test="$info?('@context') = 'http://iiif.io/api/image/2/context.json'">2</xsl:when>
+                    <xsl:when test="$info?('@context') = 'http://iiif.io/api/image/3/context.json'">3</xsl:when>
+                    <xsl:otherwise>0</xsl:otherwise>
+                </xsl:choose>
+            </xsl:variable>
+
+            <!-- 3) nur die String-Einträge aus profile nehmen -->
+            <xsl:variable name="profiles" select="
+                    $info?profile?*[
+                    . instance of xs:string
+                    and matches(., '^.*level([0-9])+(\.json)?$')
+                    ]
+                    " />
+
+            <!-- 4) Abbruch, falls Felder fehlen -->
+            <xsl:choose>
+                <xsl:when test="
+                        exists($info?('@context'))
+                        and exists($info?width)
+                        and exists($info?height)
+                        and exists($profiles)
+                        and exists($version)
+                        ">
+                    <!-- 5) Paare aus Name+lvl bauen -->
+                    <xsl:variable as="map(xs:string,item())*" name="pairs">
+                        <xsl:for-each select="$profiles">
+                            <xsl:variable name="lvl" select="xs:integer(replace(., '^.*level([0-9])+(\.json)?$', '$1'))" />
+                            <xsl:sequence select="
+                                    map {
+                                        'name': .,
+                                        'lvl': $lvl
+                                    }
+                                    " />
+                        </xsl:for-each>
+                    </xsl:variable>
+
+                    <!-- 6) höchstes Level finden und Namen extrahieren -->
+                    <xsl:variable name="max-lvl" select="max($pairs ! map:get(., 'lvl'))" />
+                    <xsl:variable name="best" select="$pairs[map:get(., 'lvl') = $max-lvl] ! map:get(., 'name')" />
+
+                    <!-- 7) Ergebnis-Map zurückgeben -->
+                    <xsl:sequence select="
+                            map {
+                                'context': $info?('@context'),
+                                'version': $version,
+                                'width': $info?width,
+                                'height': $info?height,
+                                'profile': $best
+                            }
+                            " />
+                </xsl:when>
+                <xsl:otherwise>
+                    <!-- falls Daten unvollständig sind -->
+                    <xsl:sequence select="()" />
+                </xsl:otherwise>
+            </xsl:choose>
+
+            <xsl:catch>
+                <!-- bei jedem Fehler einfach leer zurückgeben -->
+                <xsl:sequence select="()" />
+            </xsl:catch>
+        </xsl:try>
+    </xsl:function>
+
+    <!--
+        img:scale:
+          @origW und @origH: Originalbreite/-höhe
+          entweder @newW ODER @newH angeben (das jeweils andere weglassen oder auf 0 setzen)
+          liefert ein <dim width="…" height="…"/>
+    -->
+    <xsl:function as="map(xs:string,item()?)?" name="ddblabs:imageScale">
+        <xsl:param as="xs:double" name="origW" />
+        <xsl:param as="xs:double" name="origH" />
+        <xsl:param as="xs:double" name="newW" />
+        <xsl:param as="xs:double" name="newH" />
+
+        <!-- Skalierungsfaktor ermitteln -->
+        <xsl:variable name="factor" select="
+                if ($newW &gt; 0) then
+                    ($newW div $origW)
+                else
+                    ($newH div $origH)
+                " />
+
+        <!-- Neue Maße berechnen und runden -->
+        <xsl:variable name="w" select="xs:integer(round($origW * $factor))" />
+        <xsl:variable name="h" select="xs:integer(round($origH * $factor))" />
+
+        <xsl:sequence select="
+                map {
+                    'width': $w,
+                    'height': $h
+                }
                 " />
     </xsl:function>
 
@@ -343,8 +459,6 @@ limitations under the License.
     <xsl:function as="map(*)" name="ddblabs:build-iiif-canvas">
         <xsl:param as="element(mets:div)" name="physDiv" />
         <xsl:param as="xs:integer" name="position" />
-        <xsl:param as="xs:string" name="serviceVersion" />
-        <xsl:param as="xs:string" name="serviceProfileLevel" />
 
         <!-- 2) Subtrees cachen -->
         <xsl:variable name="physId" select="$physDiv/@ID" />
@@ -356,22 +470,15 @@ limitations under the License.
         <xsl:variable name="iiifFile" select="key('fileByID', $fptrID, $grpIIIF)" />
         <xsl:variable name="baseUrl" select="ddblabs:iiif-base-url(string($iiifFile/mets:FLocat/@xlink:href))" />
 
-        <!-- Bilddimensionen aus MIX -->
-        <xsl:variable name="mix" select="$amdSec/mets:techMD[@ID = string($iiifFile/@ADMID)]/mets:mdWrap/mets:xmlData/mix:mix/mix:BasicImageInformation/mix:BasicImageCharacteristics" />
-        <xsl:variable as="xs:integer" name="width" select="
-                if ($mix/mix:imageWidth) then
-                    xs:integer($mix/mix:imageWidth)
-                else
-                    1600" />
-        <xsl:variable as="xs:integer" name="height" select="
-                if ($mix/mix:imageHeight) then
-                    xs:integer($mix/mix:imageHeight)
-                else
-                    1200" />
+        <!-- Bilddimensionen aus info.json -->
+        <xsl:variable name="info" select="ddblabs:get-info($baseUrl || '/info.json')" />
+
+        <!-- Thumbnail-Größe berechnen -->
+        <xsl:variable name="thumbnailDimension" select="ddblabs:imageScale($info?width, $info?height, $thumbnailWidth, 0)" />
 
         <!-- IIIF-URL Suffix -->
         <xsl:variable name="urlSuffix" select="
-                if ($serviceVersion = '3')
+                if ($info?version = '3')
                 then
                     '/full/max/0/default.jpg'
                 else
@@ -412,8 +519,8 @@ limitations under the License.
                 map {
                     'id': $itemUrl || '/canvas/' || $physId,
                     'type': 'Canvas',
-                    'height': $height,
-                    'width': $width,
+                    'height': $info?height,
+                    'width': $info?width,
                     'items': [
                         map {
                             'id': $itemUrl || '/canvas/' || $physId || '/1',
@@ -430,12 +537,12 @@ limitations under the License.
                                         'service': [
                                             map {
                                                 'id': $baseUrl,
-                                                'type': 'ImageService' || $serviceVersion,
-                                                'profile': $serviceProfileLevel
+                                                'type': 'ImageService' || $info?version,
+                                                'profile': $info?profile
                                             }
                                         ],
-                                        'height': $height,
-                                        'width': $width
+                                        'height': $info?height,
+                                        'width': $info?width
                                     },
                                     'target': $itemUrl || '/canvas/' || $physId
                                 }
@@ -447,18 +554,18 @@ limitations under the License.
                     },
                     'thumbnail': [
                         map {
-                            'id': $baseUrl || '/full/!300,300/0/default.jpg',
+                            'id': $baseUrl || '/full/' || $thumbnailWidth || ',/0/default.jpg',
                             'type': 'Image',
                             'format': 'image/jpeg',
                             'service': [
                                 map {
                                     'id': $baseUrl,
-                                    'type': 'ImageService' || $serviceVersion,
-                                    'profile': $serviceProfileLevel
+                                    'type': 'ImageService' || $info?version,
+                                    'profile': $info?profile
                                 }
                             ],
-                            'height': 300,
-                            'width': 300
+                            'height': $thumbnailDimension?height,
+                            'width': $thumbnailDimension?width
                         }
                     ]
                 }
@@ -896,23 +1003,6 @@ limitations under the License.
 
     <xsl:template match="/" mode="iiif">
         <xsl:variable name="firstImageUrl" select="ddblabs:iiif-base-url(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrp]/mets:file[1]/mets:FLocat/@xlink:href))" />
-        <xsl:variable name="serviceJson" select="json-doc($firstImageUrl || '/info.json')" />
-        <xsl:variable name="serviceVersion">
-            <xsl:choose>
-                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/1/context.json'">1</xsl:when>
-                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/2/context.json'">2</xsl:when>
-                <xsl:when test="map:get($serviceJson, '@context') = 'http://iiif.io/api/image/3/context.json'">3</xsl:when>
-                <xsl:otherwise>0</xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-        <xsl:variable name="serviceProfileLevel">
-            <xsl:choose>
-                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/' || $serviceVersion || '/level1.json'">level1</xsl:when>
-                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/' || $serviceVersion || '/level2.json'">level2</xsl:when>
-                <xsl:when test="$serviceJson?profile?*[1] = 'http://iiif.io/api/image/' || $serviceVersion || '/level3.json'">level3</xsl:when>
-                <xsl:otherwise>level0</xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
         <xsl:map>
             <xsl:apply-templates mode="common" select="." />
             <!--
@@ -928,21 +1018,36 @@ limitations under the License.
             }],
             -->
             <xsl:variable as="xs:string" name="thumb" select="ddblabs:iiif-base-url(string(/mets:mets/mets:fileSec/mets:fileGrp[@USE = $preferredFileGrpForThumbnails][1]/mets:file[1]/mets:FLocat/@xlink:href))" />
+
+            <!-- Bilddimensionen aus info.json -->
+            <xsl:variable name="info" select="ddblabs:get-info($thumb || '/info.json')" />
+
+            <!-- Thumbnail-Größe berechnen -->
+            <xsl:variable name="thumbnailDimension" select="ddblabs:imageScale($info?width, $info?height, $thumbnailWidth, 0)" />
+
+            <!-- IIIF-URL Suffix -->
+            <xsl:variable name="urlSuffix" select="
+                    if ($info?version = '3')
+                    then
+                        '/full/max/0/default.jpg'
+                    else
+                        '/full/full/0/default.jpg'" />
+
             <xsl:map-entry key="'thumbnail'" select="
                     array {
                         map {
-                            'id': $thumb || '/full/!300,300/0/default.jpg',
+                            'id': $thumb || '/full/' || $thumbnailWidth || ',/0/default.jpg',
                             'type': 'Image',
                             'format': 'image/jpeg',
                             'service': array {
                                 map {
                                     'id': $thumb,
-                                    'type': 'ImageService' || $serviceVersion,
-                                    'profile': $serviceProfileLevel
+                                    'type': 'ImageService' || $info?version,
+                                    'profile': $info?profile
                                 }
                             },
-                            'height': 300,
-                            'width': 600
+                            'height': $thumbnailDimension?height,
+                            'width': $thumbnailDimension?width
                         }
                     }" />
             <!-- 
@@ -964,7 +1069,7 @@ limitations under the License.
                     array {
                         for $i in 1 to count($divs)
                         return
-                            ddblabs:build-iiif-canvas($divs[$i], $i, $serviceVersion, $serviceProfileLevel)
+                            ddblabs:build-iiif-canvas($divs[$i], $i)
                     }
                     " />
         </xsl:map>
