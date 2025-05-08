@@ -47,7 +47,8 @@ limitations under the License.
     <xsl:key match="mets:div" name="divByID" use="@ID" />
 
     <!-- Global Variables -->
-    <xsl:variable as="xs:integer" name="thumbnailWidth" select="600" />
+    <xsl:variable as="xs:integer" name="thumbnailWidth" select="400" />
+    <xsl:variable as="xs:integer" name="thumbnailHeight" select="300" />
     <xsl:variable as="document-node()" name="root" select="/" />
     <xsl:variable as="element(mets:fileSec)" name="fileSec" select="/mets:mets/mets:fileSec" />
     <xsl:variable as="element(mets:structMap)" name="structMapPhysical" select="/mets:mets/mets:structMap[@TYPE = 'PHYSICAL']" />
@@ -192,7 +193,7 @@ limitations under the License.
             <xsl:variable name="info" select="parse-json($raw)" />
 
             <!-- API-Verion -->
-            <xsl:variable name="version">
+            <xsl:variable as="xs:integer" name="version">
                 <xsl:choose>
                     <xsl:when test="$info?('@context') = 'http://iiif.io/api/image/1/context.json'">1</xsl:when>
                     <xsl:when test="$info?('@context') = 'http://iiif.io/api/image/2/context.json'">2</xsl:when>
@@ -240,13 +241,14 @@ limitations under the License.
                             map {
                                 'context': $info?('@context'),
                                 'version': $version,
-                                'width': $info?width,
-                                'height': $info?height,
+                                'width': xs:integer($info?width),
+                                'height': xs:integer($info?height),
                                 'profile': $best
                             }
                             " />
                 </xsl:when>
                 <xsl:otherwise>
+                    <xsl:message terminate="no">Warnung: konnte JSON von <xsl:value-of select="$url" /> nicht laden.</xsl:message>
                     <!-- falls Daten unvollständig sind -->
                     <xsl:sequence select="()" />
                 </xsl:otherwise>
@@ -259,36 +261,27 @@ limitations under the License.
         </xsl:try>
     </xsl:function>
 
-    <!--
-        img:scale:
-          @origW und @origH: Originalbreite/-höhe
-          entweder @newW ODER @newH angeben (das jeweils andere weglassen oder auf 0 setzen)
-          liefert ein <dim width="…" height="…"/>
+    <!-- 
+        Berechnet neue Bildmaße, so dass das Originalbild maximal in $thumbnailWidth×$thumbnailHeight
+        hineinpasst, ohne das Seitenverhältnis zu verzerren.
     -->
-    <xsl:function as="map(xs:string,item()?)?" name="ddblabs:imageScale">
-        <xsl:param as="xs:double" name="origW" />
-        <xsl:param as="xs:double" name="origH" />
-        <xsl:param as="xs:double" name="newW" />
-        <xsl:param as="xs:double" name="newH" />
+    <xsl:function as="map(xs:string, xs:integer)" name="ddblabs:scaleToThumbnail">
+        <!-- Übergabeparameter: Originalbreite in Pixel -->
+        <xsl:param as="xs:integer" name="origW" />
+        <!-- Übergabeparameter: Originalhöhe in Pixel -->
+        <xsl:param as="xs:integer" name="origH" />
 
-        <!-- Skalierungsfaktor ermitteln -->
-        <xsl:variable name="factor" select="
-                if ($newW &gt; 0) then
-                    ($newW div $origW)
-                else
-                    ($newH div $origH)
-                " />
+        <xsl:variable name="ratio" select="min(($thumbnailWidth div $origW, $thumbnailHeight div $origH))" />
 
-        <!-- Neue Maße berechnen und runden -->
-        <xsl:variable name="w" select="xs:integer(round($origW * $factor))" />
-        <xsl:variable name="h" select="xs:integer(round($origH * $factor))" />
+        <!-- Neue Maße errechnen: ceiling(), damit keine „halben“ Pixel übrigbleiben. -->
+        <xsl:variable as="xs:integer" name="newW" select="xs:integer(ceiling($origW * $ratio))" />
+        <xsl:variable as="xs:integer" name="newH" select="xs:integer(ceiling($origH * $ratio))" />
 
         <xsl:sequence select="
                 map {
-                    'width': $w,
-                    'height': $h
-                }
-                " />
+                    'width': $newW,
+                    'height': $newH
+                }" />
     </xsl:function>
 
     <!--
@@ -474,11 +467,11 @@ limitations under the License.
         <xsl:variable name="info" select="ddblabs:get-info($baseUrl || '/info.json')" />
 
         <!-- Thumbnail-Größe berechnen -->
-        <xsl:variable name="thumbnailDimension" select="ddblabs:imageScale($info?width, $info?height, $thumbnailWidth, 0)" />
+        <xsl:variable name="thumbnailDimension" select="ddblabs:scaleToThumbnail($info?width, $info?height)" />
 
         <!-- IIIF-URL Suffix -->
         <xsl:variable name="urlSuffix" select="
-                if ($info?version = '3')
+                if ($info?version = 3)
                 then
                     '/full/max/0/default.jpg'
                 else
@@ -554,7 +547,7 @@ limitations under the License.
                     },
                     'thumbnail': [
                         map {
-                            'id': $baseUrl || '/full/' || $thumbnailWidth || ',/0/default.jpg',
+                            'id': $baseUrl || '/full/' || $thumbnailDimension?width || ',' || $thumbnailDimension?height || '/0/default.jpg',
                             'type': 'Image',
                             'format': 'image/jpeg',
                             'service': [
@@ -568,18 +561,16 @@ limitations under the License.
                             'width': $thumbnailDimension?width
                         }
                     ]
-                }
-                ,
+                },
                 if (string-length(normalize-space($fulltextUrl)) > 0)
                 then
                     map {
-                        'rendering': [
+                        'seeAlso': [
                             map {
                                 'id': $fulltextUrl,
-                                'type': 'Text',
-                                'format': 'application/xml',
-                                'profile': 'http://www.loc.gov/standards/alto/',
-                                'label': map {'none': ['ALTO XML']}
+                                'type': 'Dataset',
+                                'format': 'application/xml+alto',
+                                'profile': 'http://www.loc.gov/standards/alto/'
                             }
                         ]
                     }
@@ -1023,7 +1014,7 @@ limitations under the License.
             <xsl:variable name="info" select="ddblabs:get-info($thumb || '/info.json')" />
 
             <!-- Thumbnail-Größe berechnen -->
-            <xsl:variable name="thumbnailDimension" select="ddblabs:imageScale($info?width, $info?height, $thumbnailWidth, 0)" />
+            <xsl:variable name="thumbnailDimension" select="ddblabs:scaleToThumbnail($info?width, $info?height)" />
 
             <!-- IIIF-URL Suffix -->
             <xsl:variable name="urlSuffix" select="
@@ -1036,7 +1027,7 @@ limitations under the License.
             <xsl:map-entry key="'thumbnail'" select="
                     array {
                         map {
-                            'id': $thumb || '/full/' || $thumbnailWidth || ',/0/default.jpg',
+                            'id': $thumb || '/full/' || $thumbnailDimension?width || ',' || $thumbnailDimension?height || '/0/default.jpg',
                             'type': 'Image',
                             'format': 'image/jpeg',
                             'service': array {
@@ -1074,5 +1065,4 @@ limitations under the License.
                     " />
         </xsl:map>
     </xsl:template>
-
 </xsl:stylesheet>
